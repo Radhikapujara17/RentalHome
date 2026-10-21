@@ -1,0 +1,76 @@
+# ==============================================================================
+# RentNest Docker Compose Development Configuration (Live Reloading)
+# Run via: docker compose -f docker-compose.dev.yml up --build
+# ==============================================================================
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: rentnest-dev-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_dev_data:/data/db
+    networks:
+      - rentnest-dev-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: rentnest-dev-server
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=5000
+      - CLIENT_URL=http://localhost:5173
+      - MONGO_URI=mongodb://mongodb:27017/rentnest
+      - JWT_SECRET=52140a6adc31364261d8e52b187fd371465877c3b8b5f9d37b657dd7bd6bf6c7
+      - USE_DEV_OTP=true
+      - DEV_OTP_CODE=123456
+      - CLOUDINARY_CLOUD_NAME=xxgwwlr7
+      - CLOUDINARY_API_KEY=631827678899188
+      - CLOUDINARY_API_SECRET=_BaDOeWBH3jMdx1hARZcNHHjVZ8E
+    command: ["npm", "run", "dev"]
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - rentnest-dev-network
+
+  client:
+    image: node:20-alpine
+    container_name: rentnest-dev-client
+    working_dir: /app
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:5000/api/v1
+      - VITE_SOCKET_URL=http://localhost:5000
+    command: ["npm", "run", "dev", "--", "--host"]
+    depends_on:
+      - server
+    networks:
+      - rentnest-dev-network
+
+volumes:
+  mongodb_dev_data:
+    driver: local
+
+networks:
+  rentnest-dev-network:
+    driver: bridge
