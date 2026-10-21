@@ -1,0 +1,14 @@
+{
+  "name": "rentnest-monorepo",
+  "version": "1.0.0",
+  "description": "RentNest — Production-Ready Urban Rental Platform (Rajkot, Gujarat launchpad)",
+  "scripts": {
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "seed": "cd server && npm run seed",
+    "docker:up": "docker compose up --build -d",
+    "docker:down": "docker compose down",
+    "docker:dev": "docker compose -f docker-compose.dev.yml up --build",
+    "docker:seed": "docker compose exec server npm run seed"
+  }
+}

@@ -1,0 +1,89 @@
+services:
+  # ============================================================================
+  # 1. MongoDB Database Container
+  # ============================================================================
+  mongodb:
+    image: mongo:7.0
+    container_name: rentnest-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - rentnest-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ============================================================================
+  # 2. RentNest Backend API Server (Node.js & Socket.io)
+  # ============================================================================
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: rentnest-server
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - CLIENT_URL=http://localhost
+      - SERVER_URL=http://localhost:5000
+      - MONGO_URI=mongodb://mongodb:27017/rentnest
+      - JWT_SECRET=52140a6adc31364261d8e52b187fd371465877c3b8b5f9d37b657dd7bd6bf6c7
+      - JWT_REFRESH_SECRET=f40867d5e21e155030e67a34598816f6038522285e5942348c0e1b5b98305874
+      - JWT_EXPIRES_IN=7d
+      - JWT_REFRESH_EXPIRES=30d
+      - USE_DEV_OTP=true
+      - DEV_OTP_CODE=123456
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME:-xxgwwlr7}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY:-631827678899188}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET:-_BaDOeWBH3jMdx1hARZcNHHjVZ8E}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - rentnest-network
+
+  # ============================================================================
+  # 3. RentNest Frontend Client (React 18 + Nginx)
+  # ============================================================================
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_BASE_URL=http://localhost:5000/api/v1
+        - VITE_SOCKET_URL=http://localhost:5000
+        - VITE_DEFAULT_CITY=Rajkot
+        - VITE_DEFAULT_LAT=22.3039
+        - VITE_DEFAULT_LNG=70.8022
+    container_name: rentnest-client
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "3000:80"
+    depends_on:
+      - server
+    networks:
+      - rentnest-network
+
+# ==============================================================================
+# Persistent Storage Volumes
+# ==============================================================================
+volumes:
+  mongodb_data:
+    driver: local
+
+# ==============================================================================
+# Isolated Bridge Network
+# ==============================================================================
+networks:
+  rentnest-network:
+    driver: bridge
