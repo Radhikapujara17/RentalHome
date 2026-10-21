@@ -35,6 +35,7 @@
 9. [Development Roadmap & Phased Execution Plan](#9-development-roadmap--phased-execution-plan)
 10. [Local Development, Deployment & CI/CD Guide](#10-local-development-deployment--cicd-guide)
 11. [Required Subscriptions, API Keys & Environment Secrets Checklist](#11-required-subscriptions-api-keys--environment-secrets-checklist)
+12. [Master Technical Architecture for All Strategic Suggestions](#12-master-technical-architecture-for-all-strategic-suggestions)
 
 ---
 
@@ -696,18 +697,50 @@ module.exports = mongoose.model('MoveInChecklist', moveInChecklistSchema);
 
 ---
 
-### Feature 6: Shortlist & Multi-Property Comparison Tool
-* **Objective**: Allow prospective tenants to compare up to 3 selected properties side-by-side on critical living metrics.
-* **Frontend Components**:
-  - `src/components/compare/CompareDrawer.jsx`: Bottom dock displaying selected properties with a "Compare Now (3/3)" button.
-  - `src/pages/ComparePage.jsx`: Side-by-side comparison table analyzing:
-    - Monthly Rent & Security Deposit
-    - Electricity Meter (Govt PGVCL vs Sub-meter rate)
-    - Water Schedule (24/7 vs Fixed 1-hr daily)
-    - Food Policy (Pure Veg vs Any)
-    - Car Parking (Covered vs Open)
-    - Carpet Area & Furnishing Item Checklist.
-* **Client State**: Managed via Zustand `useCompareStore` persisted in `localStorage`.
+### Feature 6: Shortlist, Multi-Property Comparison & Cloud Wishlist Architecture
+* **Objective**: Allow prospective tenants to bookmark homes into a persistent Wishlist and compare up to 3 selected properties side-by-side on critical living metrics with AI best-fit recommendations.
+
+#### 6.1 Database Schema Architecture
+```javascript
+// User Schema Extension (server/models/User.js)
+userSchema.add({
+  savedProperties: [{ 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Property',
+    index: true 
+  }],
+  activeComparisonList: [{ 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Property' 
+  }]
+});
+```
+
+#### 6.2 Wishlist & Comparison API Specifications
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/v1/properties/:id/save` | Private | Toggle property in user's saved wishlist in MongoDB |
+| `GET` | `/api/v1/properties/my/saved` | Private | Retrieve all bookmarked properties with full populated details |
+| `PUT` | `/api/v1/properties/my/comparison` | Private | Sync and persist current comparison list in user's MongoDB record |
+| `GET` | `/api/v1/properties/compare-shared` | Public | Load shared comparison by array of property IDs (`?ids=id1,id2,id3`) |
+
+#### 6.3 Frontend Wishlist & Comparison Components
+1. **`PropertyCard.jsx` Wishlist Button**:
+   - Heart icon button on the top-right of every property card.
+   - 1-click optimistic toggle with visual fill effect and `react-hot-toast` confirmation.
+   - If user is not authenticated, opens the Login Modal without losing page context.
+2. **`CompareModal.jsx` (Mobile-Responsive & AI-Powered)**:
+   - Floating compare bar when `shortlist.length > 0`.
+   - Responsive modal with horizontal table swipe for mobile devices (`max-h-[92vh] overflow-y-auto`).
+   - **AI Best Fit Recommendation Banner**:
+     - Calculates effective monthly outflow (rent + maintenance + utility estimate).
+     - Ranks properties based on PGVCL meter, water stability, brokerage, and deposit terms.
+     - Offers 3 AI lens presets: *Best Overall Value*, *Lowest Monthly Cost*, *Maximum Space*.
+   - **Shareable WhatsApp Link**: Button to generate a shareable URL (`/compare?ids=...`) to discuss options with roommates or family.
+3. **Dashboard "Saved Homes" Tab**:
+   - Displays all bookmarked listings in a clean grid.
+   - Features 1-click "Add to Compare", "Schedule Visit", and "Remove" actions.
+   - Automated alerts if the landlord drops the rent or confirms availability.
 
 ---
 
@@ -1362,6 +1395,169 @@ Below is the definitive checklist of every subscription, API key, and environmen
 | `SMTP_USER` & `SMTP_PASS` | `server/.env` | *(Email logs simulated in console)* | Resend API key or Gmail App Password (Section 11.5) |
 | `VITE_API_BASE_URL` | `client/.env` | `http://localhost:5000/api/v1` | Render / Railway backend URL (Section 11.7) |
 | `VITE_SOCKET_URL` | `client/.env` | `http://localhost:5000` | Render / Railway backend URL (Section 11.7) |
+
+---
+
+## 12. Master Technical Architecture for All Strategic Suggestions
+
+This section details the end-to-end technical specifications, database schemas, REST endpoints, and UI architectures for all strategic enhancements approved for RentNest.
+
+---
+
+### 12.1 Side-by-Side Property Comparison & AI Best-Fit Recommendation Engine
+
+* **Objective**: Automate decision-making for renters evaluating 2–3 properties by scoring true living costs (PGVCL direct meter vs sub-meter markups, water stability, brokerage savings, and space efficiency) through an intelligent AI engine.
+* **Algorithm & Weighting Matrix**:
+  ```
+  Total AI Score (Max 100) =
+      + Direct PGVCL Govt Meter:       30 pts (eliminates ₹10-₹12/unit markups; saves ~₹1,500/mo)
+      + 24/7 Continuous Narmada Water: 25 pts (zero tanker dependency)
+      + Zero Brokerage (Direct Owner): 20 pts (saves up to 1 month rent)
+      + Low Security Deposit (<= 2mo): 10 pts (standard Rajkot liquidity protection)
+      + Space Efficiency (sqft/₹):     15 pts (carpet area per ₹1,000 monthly rent)
+  ```
+* **Dynamic Preset Lenses**:
+  - `Best Overall Value`: Balanced weighting across utility savings and total monthly outflow.
+  - `Lowest Monthly Outflow`: Prioritizes raw rent + maintenance totals.
+  - `Maximum Space / Luxury`: Heavily weights carpet area and furnishing status.
+* **Component Architecture**:
+  - [`client/src/components/CompareModal.jsx`](file:///C:/Users/Radhika/OneDrive/Desktop/Mern/RentalHome/RentalHome/client/src/components/CompareModal.jsx): Mobile-responsive (`max-h-[92vh] overflow-y-auto`) modal with sticky header, horizontal swipe hints, AI verdict card, and direct WhatsApp CTA.
+  - [`client/src/context/CompareContext.jsx`](file:///C:/Users/Radhika/OneDrive/Desktop/Mern/RentalHome/RentalHome/client/src/context/CompareContext.jsx): Shortlist management synchronized with `localStorage` and optional MongoDB sync.
+
+---
+
+### 12.2 Persistent Cloud Wishlist & Saved Properties Architecture
+
+* **Objective**: Enable cross-device property saving for tenants who search over multiple days, with automated alerts on price drops or availability confirmations.
+* **Database Schema Extension (`server/models/User.js`)**:
+  ```javascript
+  userSchema.add({
+    savedProperties: [{ 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: 'Property',
+      index: true 
+    }],
+    activeComparisonList: [{ 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: 'Property' 
+    }]
+  });
+  ```
+* **REST API Specifications**:
+  - `POST /api/v1/properties/:id/save`: Authenticated toggle endpoint that pushes or pulls the property ID from `user.savedProperties` and returns the updated status.
+  - `GET /api/v1/properties/my/saved`: Returns all populated properties bookmarked by the user, sorted by bookmark date.
+  - `PUT /api/v1/properties/my/comparison`: Cloud-syncs the active 3-property comparison array to user account.
+* **UI Implementation**:
+  - 1-Click interactive Heart icon on [`PropertyCard.jsx`](file:///C:/Users/Radhika/OneDrive/Desktop/Mern/RentalHome/RentalHome/client/src/components/PropertyCard.jsx) with optimistic UI updates.
+  - Dedicated **"Saved Homes"** tab on the user's Dashboard ([`DashboardPage.jsx`](file:///C:/Users/Radhika/OneDrive/Desktop/Mern/RentalHome/RentalHome/client/src/pages/DashboardPage.jsx)).
+
+---
+
+### 12.3 AI-Powered Electricity Bill & Address Verification Pipeline
+
+* **Objective**: Eradicate ghost and fake listings by requiring landlords to upload an official utility bill (e.g., PGVCL in Saurashtra) and verifying genuine ownership via AI Vision OCR.
+* **Data Flow Architecture**:
+  1. **Upload**: Landlord uploads bill photo/PDF in Step 5 of Post Property.
+  2. **Extraction Engine**: Server forwards file buffer to Google Gemini 1.5 Flash Vision / Document AI with structured JSON prompt:
+     ```json
+     {
+       "consumerNumber": "11-digit PGVCL consumer code",
+       "consumerName": "Full name printed on bill",
+       "serviceAddress": "Physical installation address",
+       "tariffType": "R-LT (Residential) or C-LT (Commercial)"
+     }
+     ```
+  3. **Verification Matcher**:
+     - Compares `consumerName` with `User.name` using Levenshtein distance string matching (>80% threshold).
+     - Validates that `tariffType` is `R-LT` (prevents commercial units masquerading as residential).
+     - Confirms locality matches property `fullAddress`.
+  4. **Status Assignment**: Automatically tags property with `isVerifiedOwner = true` and `isAiVerified = true`, displaying the green badge on cards and detail pages.
+
+---
+
+### 12.4 Owner & Broker Multi-Property Portfolio Management
+
+* **Objective**: Enable landlords (who typically own 2–5 units) and commercial brokers (managing 15–50 listings) to manage their entire inventory from a single unified dashboard.
+* **Portfolio Capabilities**:
+  - **Quick Status Toggle**: 1-click toggle between `"Available"` and `"Rented Out"` to prevent phone calls once a tenant signs the agreement.
+  - **Inquiry & Lead Analytics**: Real-time counter of total page views, shortlist counts, and physical visit requests received per property.
+  - **Single-Click Duplicate**: Allows brokers to clone a listing (e.g. identical 2 BHK in the same apartment tower) with different floor numbers.
+* **REST Endpoints**:
+  - `GET /api/v1/properties/my/listings`: Returns all listings owned by `req.user._id` with status filters (`active`, `rented`, `unlisted`).
+  - `PATCH /api/v1/properties/:id/toggle-status`: Instantly toggles between `active` and `rented`.
+
+---
+
+### 12.5 Dynamic Multi-City Scaling Engine
+
+* **Objective**: Architecture that dynamically serves multiple Tier-1 and Tier-2 cities in Gujarat (Rajkot, Ahmedabad, Surat, Vadodara, Gandhinagar) without hardcoded queries or schema changes.
+* **City Registry Architecture**:
+  ```javascript
+  const CITY_REGISTRY = {
+    Rajkot: {
+      center: [22.3039, 70.8022],
+      defaultZoom: 13,
+      discom: 'PGVCL',
+      localities: ['Kalawad Road', 'University Road', '150 Ft Ring Road', 'Nana Mava', 'Raiya Road', 'Sadhu Vaswani Road']
+    },
+    Ahmedabad: {
+      center: [23.0225, 72.5714],
+      defaultZoom: 13,
+      discom: 'Torrent Power / UGVCL',
+      localities: ['SG Highway', 'Prahlad Nagar', 'Bodakdev', 'Satellite', 'Bopal', 'Vastrapur']
+    },
+    Surat: {
+      center: [21.1702, 72.8311],
+      defaultZoom: 13,
+      discom: 'DGVCL / Torrent Power',
+      localities: ['Vesu', 'Adajan', 'Pal', 'Piplod', 'Ghod Dod Road', 'Varachha']
+    },
+    Vadodara: {
+      center: [22.3072, 73.1812],
+      defaultZoom: 13,
+      discom: 'MGVCL',
+      localities: ['Alkapuri', 'Vasna Road', 'Gotri', 'OP Road', 'Manjalpur', 'Sayajigunj']
+    }
+  };
+  ```
+* **Dynamic Client Updates**:
+  - Navbar contains global city dropdown selector stored in `localStorage` and URL parameter (`?city=Ahmedabad`).
+  - Leaflet map re-centers dynamically to `CITY_REGISTRY[selectedCity].center`.
+  - Utility labels and filter options adapt to local DISCOM rules automatically.
+
+---
+
+### 12.6 Direct UPI Rent QR Code Generation on Rental Agreements
+
+* **Objective**: Automate rent payment collection by embedding a standardized NPCI-compliant UPI QR code into digital rental agreements and invoices.
+* **Payload Format**:
+  `upi://pay?pa={landlordVpa}&pn={landlordName}&am={rentAmount}&cu=INR&tn=RentNest_Rent_{monthYear}`
+* **Generation Engine**:
+  - Backend utilizes `qrcode.toDataURL()` in `server/controllers/toolsController.js` during agreement compilation.
+  - Injected directly into printable HTML and PDF agreement outputs.
+  - Tenants scan using any Indian payment app (Google Pay, PhonePe, Paytm, BHIM) to settle monthly rent.
+
+---
+
+### 12.7 Automated 21-Day WhatsApp Listing Freshness Bot
+
+* **Objective**: Ensure 100% active inventory by automatically checking listing status with landlords every 21 days via WhatsApp conversational webhooks.
+* **Workflow**:
+  - Daily cron job at `0 10 * * *` queries listings where `lastFreshnessConfirmedAt < Date.now() - 21 days`.
+  - Twilio/Gupshup API sends 2-way WhatsApp prompt.
+  - Webhook parser handles incoming answers:
+    - `"1"`: Resets freshness counter.
+    - `"2"`: Flips status to `'rented'` and notifies any tenants who had saved the listing.
+
+---
+
+### 12.8 Progressive Web App (PWA) Mobile Install Experience
+
+* **Objective**: Provide a native-like mobile app experience with zero App Store friction or fee overhead.
+* **Components**:
+  - Manifest: [`client/public/manifest.json`](file:///C:/Users/Radhika/OneDrive/Desktop/Mern/RentalHome/RentalHome/client/public/manifest.json) configured with standalone display, orientation lock, and brand icons.
+  - Custom In-App Install Banner: Listens to the `beforeinstallprompt` event and prompts mobile users to "Add RentNest to Home Screen" with 1 click.
+  - Service Worker: Caches static CSS, JS chunks, and Leaflet map tiles for offline resilience.
 
 ---
 

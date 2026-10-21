@@ -5,19 +5,29 @@ import PropertyCard from '../components/PropertyCard';
 import SplitMap from '../components/SplitMap';
 import FilterBar from '../components/FilterBar';
 import SavedSearchModal from '../components/SavedSearchModal';
-import { Map, List, Home, AlertCircle, Bell } from 'lucide-react';
+import { Map, List, Home, AlertCircle, Bell, Building2 } from 'lucide-react';
 
 const ExplorePage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedProperty, setSelectedProperty] = useState(null);
+  const [hoveredPropertyId, setHoveredPropertyId] = useState(null);
   const [viewMode, setViewMode] = useState('split'); // 'split', 'list', 'map' for mobile
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
 
+  const initialCity = searchParams.get('city') || localStorage.getItem('rentnest_selected_city') || 'Rajkot';
+
   const [filters, setFilters] = useState({
+    city: initialCity === 'All' ? '' : initialCity,
+    category: searchParams.get('category') || 'residential',
     locality: searchParams.get('locality') || '',
     bhk: searchParams.get('bhk') || '',
+    commercialType: searchParams.get('commercialType') || '',
+    minPowerLoadHp: searchParams.get('minPowerLoadHp') || '',
+    minRoadWidthFt: searchParams.get('minRoadWidthFt') || '',
+    buPermissionCertified: searchParams.get('buPermissionCertified') || '',
+    fireNocStatus: searchParams.get('fireNocStatus') || '',
     zeroBrokerage: searchParams.get('zeroBrokerage') || '',
     meterType: searchParams.get('meterType') || '',
     waterType: searchParams.get('waterType') || '',
@@ -25,6 +35,13 @@ const ExplorePage = () => {
     sort: searchParams.get('sort') || 'newest',
     search: searchParams.get('search') || '',
   });
+
+  useEffect(() => {
+    const cityParam = searchParams.get('city');
+    if (cityParam !== null && cityParam !== filters.city) {
+      setFilters((prev) => ({ ...prev, city: cityParam === 'All' ? '' : cityParam, locality: '' }));
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const fetchFilteredProperties = async () => {
@@ -52,30 +69,88 @@ const ExplorePage = () => {
     fetchFilteredProperties();
   }, [filters]);
 
+  const handleCategorySwitch = (newCat) => {
+    setFilters((prev) => ({
+      ...prev,
+      category: newCat,
+      bhk: '',
+      foodPreference: '',
+      commercialType: '',
+      minPowerLoadHp: '',
+      minRoadWidthFt: '',
+      buPermissionCertified: '',
+      fireNocStatus: '',
+    }));
+  };
+
   const handleResetFilters = () => {
-    setFilters({
+    setFilters((prev) => ({
+      category: prev.category,
       locality: '',
       bhk: '',
+      commercialType: '',
+      minPowerLoadHp: '',
+      minRoadWidthFt: '',
+      buPermissionCertified: '',
+      fireNocStatus: '',
       zeroBrokerage: '',
       meterType: '',
       waterType: '',
       foodPreference: '',
       sort: 'newest',
       search: '',
-    });
+    }));
   };
+
+  const isCommercial = filters.category === 'commercial';
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       
+      {/* Category Toggle Tabs */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm">
+        <div className="flex items-center space-x-2 bg-slate-100 p-1.5 rounded-2xl w-full sm:w-fit">
+          <button
+            onClick={() => handleCategorySwitch('residential')}
+            className={`flex-1 sm:flex-initial flex items-center justify-center space-x-2 px-5 py-2.5 rounded-xl text-xs font-black transition-all ${
+              !isCommercial
+                ? 'bg-white text-blue-600 shadow-sm scale-[1.02]'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Home className="w-4 h-4" />
+            <span>🏠 Residential Homes</span>
+          </button>
+          <button
+            onClick={() => handleCategorySwitch('commercial')}
+            className={`flex-1 sm:flex-initial flex items-center justify-center space-x-2 px-5 py-2.5 rounded-xl text-xs font-black transition-all ${
+              isCommercial
+                ? 'bg-blue-600 text-white shadow-sm scale-[1.02]'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Building2 className="w-4 h-4" />
+            <span>🏢 Commercial Spaces</span>
+          </button>
+        </div>
+
+        <div className="text-xs font-semibold text-slate-500 hidden sm:block">
+          {isCommercial 
+            ? '⚡ Retail Shops, Corporate Offices, Showrooms & Industrial Sheds' 
+            : '🌱 Verified Flats, Independent Houses & Coliving Homes'}
+        </div>
+      </div>
+
       {/* Header and Mobile View Toggle */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-            Rental Properties in Rajkot, Gujarat
+            {isCommercial ? 'Commercial Spaces for Rent in Rajkot' : 'Rental Homes in Rajkot, Gujarat'}
           </h1>
           <p className="text-xs text-slate-500 font-medium">
-            Showing {properties.length} transparent homes with verified electricity & water reality
+            {isCommercial
+              ? `Showing ${properties.length} commercial properties with power load (HP), road width & BU certificate details`
+              : `Showing ${properties.length} transparent homes with verified electricity & water reality`}
           </p>
         </div>
 
@@ -124,7 +199,9 @@ const ExplorePage = () => {
           <SplitMap
             properties={properties}
             selectedProperty={selectedProperty}
+            hoveredPropertyId={hoveredPropertyId}
             onMarkerClick={(p) => setSelectedProperty(p)}
+            city={filters.city}
           />
         </div>
 
@@ -160,6 +237,8 @@ const ExplorePage = () => {
                   key={prop._id}
                   property={prop}
                   onSelectOnMap={(p) => setSelectedProperty(p)}
+                  onHover={(id) => setHoveredPropertyId(id)}
+                  onLeave={() => setHoveredPropertyId(null)}
                 />
               ))}
             </div>

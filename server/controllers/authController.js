@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const { verifyNameMatch } = require('../utils/helpers');
 
 // Helper to generate JWT token
 const generateToken = (id) => {
@@ -60,6 +61,7 @@ exports.register = async (req, res, next) => {
       message: 'Account registered successfully!',
       token,
       user: {
+        _id: user._id,
         id: user._id,
         name: user.name,
         phone: user.phone,
@@ -115,6 +117,7 @@ exports.login = async (req, res, next) => {
       success: true,
       token,
       user: {
+        _id: user._id,
         id: user._id,
         name: user.name,
         phone: user.phone,
@@ -211,6 +214,7 @@ exports.verifyOtp = async (req, res, next) => {
       success: true,
       token,
       user: {
+        _id: user._id,
         id: user._id,
         name: user.name,
         phone: user.phone,
@@ -270,6 +274,7 @@ exports.demoLogin = async (req, res, next) => {
       success: true,
       token,
       user: {
+        _id: user._id,
         id: user._id,
         name: user.name,
         phone: user.phone,
@@ -327,12 +332,12 @@ exports.updateProfile = async (req, res, next) => {
   }
 };
 
-// @desc    Submit Owner Electricity Bill / KYC Document
+// @desc    Submit Owner Electricity Bill / KYC Document with Intelligent Verification
 // @route   POST /api/v1/auth/kyc/submit
 // @access  Private
 exports.submitKyc = async (req, res, next) => {
   try {
-    const { kycDocumentUrl, kycDocumentType = 'electricity_bill' } = req.body;
+    const { kycDocumentUrl, kycDocumentType = 'electricity_bill', consumerName } = req.body;
     if (!kycDocumentUrl) {
       return res.status(400).json({ success: false, message: 'Please provide document URL / photo' });
     }
@@ -340,15 +345,54 @@ exports.submitKyc = async (req, res, next) => {
     const user = await User.findById(req.user.id);
     user.kycDocumentUrl = kycDocumentUrl;
     user.kycDocumentType = kycDocumentType;
-    user.verificationStatus = 'pending';
     user.kycSubmittedAt = new Date();
-    await user.save();
 
-    res.status(200).json({
-      success: true,
-      message: 'KYC Document submitted for admin verification',
-      user
-    });
+    const Property = require('../models/Property');
+    const { isMatch, confidence } = verifyNameMatch(user.name, consumerName || user.name);
+
+    if (isMatch) {
+      // Document name matched landlord account!
+      user.verificationStatus = 'verified';
+      user.kycVerifiedAt = new Date();
+      await user.save();
+
+      // Automatically tag all listings owned by this landlord as Verified!
+      await Property.updateMany(
+        { owner: user._id },
+        { 
+          isVerifiedOwner: true,
+          ownershipDocumentVerified: true,
+          ownershipDocumentUrl: kycDocumentUrl,
+          ownershipDocumentType: kycDocumentType,
+          verifiedDocumentDetails: {
+            consumerName: consumerName || user.name,
+            matchConfidence: confidence,
+            verifiedAt: new Date(),
+            autoVerified: true,
+            verificationNote: `Verified via KYC bill matching owner profile (${user.name})`
+          }
+        }
+      );
+
+      return res.status(200).json({
+        success: true,
+        verified: true,
+        matchConfidence: confidence,
+        message: `Ownership verified successfully! Name matched with ${confidence}% confidence. Verified badge added to your account & listings!`,
+        user
+      });
+    } else {
+      user.verificationStatus = 'pending';
+      await user.save();
+
+      return res.status(200).json({
+        success: true,
+        verified: false,
+        matchConfidence: confidence,
+        message: `Document submitted for manual review. Name on document ("${consumerName}") does not match profile name ("${user.name}").`,
+        user
+      });
+    }
   } catch (error) {
     next(error);
   }

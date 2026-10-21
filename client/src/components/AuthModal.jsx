@@ -46,14 +46,14 @@ const AuthModal = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
+      <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-4 max-h-[92vh] flex flex-col">
         
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-5 text-white flex items-center justify-between">
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-5 sm:px-6 py-4 sm:py-5 text-white flex items-center justify-between shrink-0">
           <div>
-            <h3 className="text-lg font-extrabold">Welcome to RentNest</h3>
-            <p className="text-xs text-blue-100">Zero-brokerage rental discovery in Rajkot</p>
+            <h3 className="text-base sm:text-lg font-extrabold">Welcome to RentNest</h3>
+            <p className="text-[11px] sm:text-xs text-blue-100">Zero-brokerage rental discovery in Rajkot</p>
           </div>
           <button
             onClick={() => setIsAuthModalOpen(false)}
@@ -63,7 +63,7 @@ const AuthModal = () => {
           </button>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-5 overflow-y-auto">
           
           {/* Quick Demo 1-Click Login Section */}
           <div className="bg-blue-50/70 border border-blue-200/80 rounded-2xl p-4">

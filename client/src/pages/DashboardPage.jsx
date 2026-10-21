@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useWishlist } from '../context/WishlistContext';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
 import toast from 'react-hot-toast';
@@ -12,18 +13,22 @@ import {
   PlusCircle, 
   ExternalLink, 
   Trash2, 
-  Clock,
-  CheckCircle2,
-  Phone,
-  FileCheck
+  Clock, 
+  CheckCircle2, 
+  Phone, 
+  FileCheck, 
+  Pencil,
+  Heart
 } from 'lucide-react';
 
 const DashboardPage = () => {
   const { user, demoLogin } = useAuth();
+  const { wishlist, toggleWishlist, refreshWishlist } = useWishlist();
   const [properties, setProperties] = useState([]);
   const [visits, setVisits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isKycModalOpen, setIsKycModalOpen] = useState(false);
+  const [dashboardTab, setDashboardTab] = useState(user?.role === 'tenant' ? 'saved' : 'listings');
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -152,70 +157,180 @@ const DashboardPage = () => {
       {/* Grid: My Properties & My Scheduled Visits */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
-        {/* Left: My Listed Properties (7 cols) */}
+        {/* Left: My Listed Properties / Saved Wishlist (7 cols) */}
         <div className="lg:col-span-7 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-black text-slate-900 flex items-center space-x-2">
-              <Home className="w-5 h-5 text-blue-600" />
-              <span>My Properties ({properties.length})</span>
-            </h2>
-            <Link
-              to="/post-property"
-              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl flex items-center space-x-1.5 transition-colors shadow-sm"
-            >
-              <PlusCircle className="w-3.5 h-3.5" />
-              <span>Add New</span>
-            </Link>
+          
+          {/* Tab Switcher */}
+          <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setDashboardTab('listings')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 ${
+                  dashboardTab === 'listings'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <Home className="w-3.5 h-3.5" />
+                <span>My Listings ({properties.length})</span>
+              </button>
+
+              <button
+                onClick={() => setDashboardTab('saved')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 ${
+                  dashboardTab === 'saved'
+                    ? 'bg-rose-500 text-white shadow-sm'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <Heart className="w-3.5 h-3.5" />
+                <span>Saved Wishlist ({wishlist.length})</span>
+              </button>
+            </div>
+
+            {dashboardTab === 'listings' && (
+              <Link
+                to="/post-property"
+                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl flex items-center space-x-1.5 transition-colors shadow-sm"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                <span>Add New</span>
+              </Link>
+            )}
           </div>
 
-          {loading ? (
-            <div className="h-40 bg-slate-100 rounded-2xl animate-pulse"></div>
-          ) : properties.length === 0 ? (
-            <div className="p-8 rounded-2xl bg-white border border-slate-200 text-center space-y-2">
-              <p className="text-xs font-bold text-slate-600">No properties listed under this account yet.</p>
-              <Link to="/post-property" className="text-xs font-bold text-blue-600 hover:underline block">
-                Post your first property listing
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {properties.map((prop) => (
-                <div
-                  key={prop._id}
-                  className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between gap-4"
-                >
-                  <div className="flex items-center space-x-3">
-                    <img
-                      src={prop.photos?.[0]?.url || 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=200&q=80'}
-                      alt={prop.title}
-                      className="w-16 h-16 rounded-xl object-cover"
-                    />
-                    <div>
-                      <h4 className="text-xs font-extrabold text-slate-900 line-clamp-1">{prop.title}</h4>
-                      <p className="text-[11px] text-slate-500 font-medium">{prop.societyName}, {prop.locality} • {prop.bhk}</p>
-                      <span className="text-xs font-black text-blue-600">₹{prop.pricing.monthlyRent.toLocaleString()}/mo</span>
+          {/* Tab 1: My Listings */}
+          {dashboardTab === 'listings' && (
+            loading ? (
+              <div className="h-40 bg-slate-100 rounded-2xl animate-pulse"></div>
+            ) : properties.length === 0 ? (
+              <div className="p-8 rounded-2xl bg-white border border-slate-200 text-center space-y-2">
+                <p className="text-xs font-bold text-slate-600">No properties listed under this account yet.</p>
+                <Link to="/post-property" className="text-xs font-bold text-blue-600 hover:underline block">
+                  Post your first property listing
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {properties.map((prop) => (
+                  <div
+                    key={prop._id}
+                    className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between gap-4"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <img
+                        src={prop.photos?.[0]?.url || 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=200&q=80'}
+                        alt={prop.title}
+                        className="w-16 h-16 rounded-xl object-cover"
+                      />
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <h4 className="text-xs font-extrabold text-slate-900 line-clamp-1">{prop.title}</h4>
+                          {prop.isVerifiedOwner && (
+                            <span className="px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[9px] font-black shrink-0">
+                              ✓ Verified
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-500 font-medium">
+                          {prop.societyName}, {prop.locality} {prop.city ? `(${prop.city})` : ''} • {prop.bhk}
+                        </p>
+                        <div className="flex items-center space-x-2 mt-0.5">
+                          <span className="text-xs font-black text-blue-600">₹{prop.pricing.monthlyRent.toLocaleString()}/mo</span>
+                          {!prop.isVerifiedOwner && (
+                            <button
+                              onClick={() => setIsKycModalOpen(true)}
+                              className="text-[10px] text-amber-700 hover:text-amber-800 font-bold underline"
+                            >
+                              + Verify Bill
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Link
+                        to={`/property/${prop.slug || prop._id}`}
+                        className="p-2 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 transition-colors"
+                        title="View Details"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </Link>
+                      <Link
+                        to={`/edit-property/${prop._id}`}
+                        className="p-2 rounded-xl bg-slate-100 hover:bg-amber-50 text-slate-600 hover:text-amber-600 transition-colors"
+                        title="Edit Property Listing"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Link>
+                      <button
+                        onClick={() => handleDeleteProperty(prop._id)}
+                        className="p-2 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
+                ))}
+              </div>
+            )
+          )}
 
-                  <div className="flex items-center space-x-2">
-                    <Link
-                      to={`/property/${prop.slug || prop._id}`}
-                      className="p-2 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 transition-colors"
-                      title="View Details"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </Link>
-                    <button
-                      onClick={() => handleDeleteProperty(prop._id)}
-                      className="p-2 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 transition-colors"
-                      title="Delete"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+          {/* Tab 2: Saved Wishlist */}
+          {dashboardTab === 'saved' && (
+            wishlist.length === 0 ? (
+              <div className="p-8 rounded-2xl bg-white border border-slate-200 text-center space-y-2">
+                <Heart className="w-8 h-8 text-rose-300 mx-auto" />
+                <p className="text-xs font-bold text-slate-600">Your saved wishlist is empty</p>
+                <p className="text-[11px] text-slate-400">Click the heart icon on any property card to save homes for later.</p>
+                <Link to="/explore" className="text-xs font-bold text-blue-600 hover:underline block pt-1">
+                  Explore available properties →
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {wishlist.map((prop) => (
+                  <div
+                    key={prop._id}
+                    className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between gap-4"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <img
+                        src={prop.photos?.[0]?.url || 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=200&q=80'}
+                        alt={prop.title}
+                        className="w-16 h-16 rounded-xl object-cover"
+                      />
+                      <div>
+                        <h4 className="text-xs font-extrabold text-slate-900 line-clamp-1">{prop.title}</h4>
+                        <p className="text-[11px] text-slate-500 font-medium">
+                          {prop.societyName}, {prop.locality} {prop.city ? `(${prop.city})` : ''} • {prop.bhk}
+                        </p>
+                        <span className="text-xs font-black text-rose-600">₹{prop.pricing?.monthlyRent?.toLocaleString()}/mo</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Link
+                        to={`/property/${prop.slug || prop._id}`}
+                        className="p-2 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 transition-colors"
+                        title="View Details"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </Link>
+                      <button
+                        onClick={() => toggleWishlist(prop)}
+                        className="p-2 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors"
+                        title="Remove from wishlist"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )
           )}
         </div>
 

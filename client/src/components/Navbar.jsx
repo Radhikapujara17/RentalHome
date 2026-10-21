@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCompare } from '../context/CompareContext';
+import { useWishlist } from '../context/WishlistContext';
 import { 
   Home, 
   PlusCircle, 
@@ -19,15 +20,39 @@ import {
   LayoutDashboard,
   Menu,
   X,
-  Sparkles
+  Sparkles,
+  Building2,
+  Heart,
+  ChevronDown
 } from 'lucide-react';
 
 const Navbar = () => {
   const { user, isAuthenticated, logout, setIsAuthModalOpen, setIsChatOpen } = useAuth();
   const { shortlist, setIsCompareModalOpen } = useCompare();
+  const { savedCount } = useWishlist();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+
+  const [selectedCity, setSelectedCity] = useState(() => {
+    return localStorage.getItem('rentnest_selected_city') || 'Rajkot';
+  });
+
+  const handleCityChange = (newCity) => {
+    setSelectedCity(newCity);
+    localStorage.setItem('rentnest_selected_city', newCity);
+    if (location.pathname === '/explore') {
+      const search = new URLSearchParams(location.search);
+      if (newCity === 'All') {
+        search.delete('city');
+      } else {
+        search.set('city', newCity);
+      }
+      navigate(`/explore?${search.toString()}`);
+    } else {
+      navigate(newCity === 'All' ? '/explore' : `/explore?city=${newCity}`);
+    }
+  };
 
   // Role-specific navigation menus (Only shown when logged in)
   const getNavItems = () => {
@@ -38,29 +63,31 @@ const Navbar = () => {
         return [
           { label: 'My Listings & Visits', to: '/dashboard', icon: LayoutDashboard },
           { label: 'Market Explore', to: '/explore', icon: Search },
-          { label: 'Rental Agreement', to: '/tools/rental-agreement', icon: FileText },
+          // Rental Agreement hidden from menu per configuration; route /tools/rental-agreement remains functional
+          // { label: 'Rental Agreement', to: '/tools/rental-agreement', icon: FileText },
           { label: 'Move-in Checklist', to: '/tools/move-in-checklist', icon: CheckSquare },
         ];
       case 'broker':
         return [
           { label: 'Broker Dashboard', to: '/dashboard', icon: Briefcase },
           { label: 'Explore Inventory', to: '/explore', icon: Search },
-          { label: 'Rental Agreement', to: '/tools/rental-agreement', icon: FileText },
+          // { label: 'Rental Agreement', to: '/tools/rental-agreement', icon: FileText },
         ];
       case 'admin':
         return [
           { label: 'Admin Desk', to: '/admin', icon: Shield, badge: 'Review Desk' },
           { label: 'Operations', to: '/dashboard', icon: LayoutDashboard },
           { label: 'All Listings', to: '/explore', icon: Search },
-          { label: 'Agreements', to: '/tools/rental-agreement', icon: FileText },
+          // { label: 'Agreements', to: '/tools/rental-agreement', icon: FileText },
         ];
       case 'tenant':
       default:
         return [
           { label: 'Explore Homes', to: '/explore', icon: Search },
+          { label: 'Commercial Spaces', to: '/explore?category=commercial', icon: Building2 },
           { label: 'Flatmates', to: '/roommates', icon: Users },
           { label: 'HRA Calculator', to: '/tools/hra-calculator', icon: Calculator },
-          { label: 'Agreement', to: '/tools/rental-agreement', icon: FileText },
+          // { label: 'Agreement', to: '/tools/rental-agreement', icon: FileText },
           { label: 'Deposit Shield', to: '/tools/move-in-checklist', icon: CheckSquare },
         ];
     }
@@ -97,9 +124,21 @@ const Navbar = () => {
                   <span className="text-xl font-extrabold tracking-tight text-slate-900">
                     Rent<span className="text-blue-600">Nest</span>
                   </span>
-                  <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-emerald-200">
-                    Rajkot
-                  </span>
+                  <div className="relative inline-flex items-center">
+                    <select
+                      value={selectedCity}
+                      onChange={(e) => handleCityChange(e.target.value)}
+                      className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[10px] font-bold pl-2 pr-5 py-0.5 rounded-full border border-emerald-300 focus:outline-none cursor-pointer appearance-none shadow-xs transition-colors"
+                      title="Switch City"
+                    >
+                      <option value="Rajkot">📍 Rajkot</option>
+                      <option value="Ahmedabad">📍 Ahmedabad</option>
+                      <option value="Surat">📍 Surat</option>
+                      <option value="Vadodara">📍 Vadodara</option>
+                      <option value="All">🌐 All Cities</option>
+                    </select>
+                    <ChevronDown className="w-2.5 h-2.5 text-emerald-700 absolute right-1.5 pointer-events-none" />
+                  </div>
                 </div>
                 <span className="text-[10px] text-slate-400 font-medium tracking-wider uppercase">
                   Zero Hidden Costs
@@ -152,6 +191,20 @@ const Navbar = () => {
             ) : (
               /* When Logged In: Role-Tailored Action CTAs & Profile */
               <>
+                {/* Wishlist Quick Access */}
+                <Link
+                  to="/dashboard"
+                  className="p-2.5 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 transition-colors relative"
+                  title="View Saved Wishlist"
+                >
+                  <Heart className={`w-4 h-4 ${savedCount > 0 ? 'text-rose-500 fill-rose-500' : ''}`} />
+                  {savedCount > 0 && (
+                    <span className="w-4 h-4 rounded-full bg-rose-500 text-white flex items-center justify-center text-[9px] font-black absolute -top-1 -right-1 ring-2 ring-white">
+                      {savedCount}
+                    </span>
+                  )}
+                </Link>
+
                 {/* Live Chat Trigger Button */}
                 <button
                   onClick={() => setIsChatOpen(true)}

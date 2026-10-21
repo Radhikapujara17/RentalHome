@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CompareProvider } from './context/CompareContext';
+import { WishlistProvider } from './context/WishlistContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import AuthModal from './components/AuthModal';
@@ -58,6 +59,7 @@ function AppContent() {
           <Route path="/roommates" element={!isAuthenticated ? <Navigate to="/login" replace /> : <RoommatesPage />} />
           <Route path="/property/:idOrSlug" element={!isAuthenticated ? <Navigate to="/login" replace /> : <PropertyDetailPage />} />
           <Route path="/post-property" element={!isAuthenticated ? <Navigate to="/login" replace /> : <PostPropertyPage />} />
+          <Route path="/edit-property/:id" element={!isAuthenticated ? <Navigate to="/login" replace /> : <PostPropertyPage />} />
           <Route path="/tools/hra-calculator" element={!isAuthenticated ? <Navigate to="/login" replace /> : <HraCalculatorPage />} />
           <Route path="/tools/rental-agreement" element={!isAuthenticated ? <Navigate to="/login" replace /> : <AgreementGeneratorPage />} />
           <Route path="/tools/move-in-checklist" element={!isAuthenticated ? <Navigate to="/login" replace /> : <MoveInChecklistPage />} />
@@ -80,9 +82,11 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <CompareProvider>
-        <AppContent />
-      </CompareProvider>
+      <WishlistProvider>
+        <CompareProvider>
+          <AppContent />
+        </CompareProvider>
+      </WishlistProvider>
     </AuthProvider>
   );
 }

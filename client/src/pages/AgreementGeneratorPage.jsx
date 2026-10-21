@@ -19,6 +19,7 @@ const AgreementGeneratorPage = () => {
     subMeterRate: 0,
     lockInPeriodMonths: 6,
     noticePeriodDays: 30,
+    landlordUpiId: 'jayesh.patel@okaxis',
     startDate: new Date().toISOString().split('T')[0]
   });
 
@@ -161,6 +162,17 @@ const AgreementGeneratorPage = () => {
               </select>
             </div>
 
+            <div>
+              <label className="block text-slate-700 mb-1">Landlord UPI ID (For Direct Rent QR Code)</label>
+              <input
+                type="text"
+                placeholder="e.g. jayesh.patel@okaxis or 9876543202@upi"
+                value={formData.landlordUpiId}
+                onChange={(e) => setFormData({ ...formData, landlordUpiId: e.target.value })}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 outline-none font-bold"
+              />
+            </div>
+
             <button
               type="submit"
               disabled={loading}
@@ -201,9 +213,38 @@ const AgreementGeneratorPage = () => {
             </div>
 
             {agreementText ? (
-              <pre className="p-4 rounded-2xl bg-slate-50 border border-slate-200 font-mono text-xs text-slate-800 whitespace-pre-wrap leading-relaxed max-h-[550px] overflow-y-auto">
-                {agreementText}
-              </pre>
+              <div className="space-y-4">
+                {/* Embedded NPCI UPI Payment QR Code */}
+                <div className="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl flex items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-200">
+                      ⚡ 1-Click Monthly Rent Payment QR Code
+                    </span>
+                    <div className="text-lg font-black text-slate-900">
+                      ₹{Number(formData.monthlyRent || 0).toLocaleString()} / month
+                    </div>
+                    <div className="text-xs text-slate-700 font-mono font-bold">
+                      UPI ID: {formData.landlordUpiId || 'rentnest@upi'}
+                    </div>
+                    <p className="text-[10px] text-slate-500">
+                      Tenant scans to settle rent via Google Pay, PhonePe, Paytm, or BHIM directly to landlord bank account.
+                    </p>
+                  </div>
+
+                  <div className="p-2 bg-white rounded-xl border border-emerald-200 shadow-sm shrink-0 text-center">
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${encodeURIComponent(`upi://pay?pa=${formData.landlordUpiId || 'rentnest@upi'}&pn=${encodeURIComponent(formData.landlordName || 'Landlord')}&am=${formData.monthlyRent}&cu=INR&tn=Rent_Payment`)}`}
+                      alt="UPI Rent Payment QR Code"
+                      className="w-24 h-24 mx-auto rounded-lg"
+                    />
+                    <span className="text-[9px] font-bold text-slate-500 block mt-1">Scan with UPI</span>
+                  </div>
+                </div>
+
+                <pre className="p-4 rounded-2xl bg-slate-50 border border-slate-200 font-mono text-xs text-slate-800 whitespace-pre-wrap leading-relaxed max-h-[500px] overflow-y-auto">
+                  {agreementText}
+                </pre>
+              </div>
             ) : (
               <div className="bg-slate-50 rounded-2xl p-12 text-center border border-slate-200 space-y-3">
                 <FileText className="w-12 h-12 text-slate-300 mx-auto" />

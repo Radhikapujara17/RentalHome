@@ -7,19 +7,57 @@ const propertySchema = new mongoose.Schema({
   owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   
   // Categorization
+  category: {
+    type: String,
+    enum: ['residential', 'commercial'],
+    default: 'residential',
+    index: true
+  },
   propertyType: { 
     type: String, 
-    enum: ['flat', 'independent_house', 'row_house', 'penthouse', 'pg_coliving', 'shared_room'],
+    enum: [
+      'flat', 'independent_house', 'row_house', 'penthouse', 'pg_coliving', 'shared_room',
+      'retail_shop', 'corporate_office', 'showroom', 'warehouse_godown', 'industrial_shed', 'co_working'
+    ],
     default: 'flat',
     required: true 
   },
-  bhk: { type: String, enum: ['1 RK', '1 BHK', '2 BHK', '3 BHK', '4+ BHK'], required: true },
+  bhk: { 
+    type: String, 
+    enum: ['1 RK', '1 BHK', '2 BHK', '3 BHK', '4+ BHK', 'N/A'], 
+    default: 'N/A' 
+  },
   carpetAreaSqFt: { type: Number, required: true },
   floorNumber: { type: Number, default: 0 },
   totalFloors: { type: Number, default: 1 },
   facing: { type: String, enum: ['East', 'North-East', 'North', 'West', 'South', 'Other'], default: 'East' },
 
+  // Commercial Specific Specifications (Active when category === 'commercial')
+  commercialDetails: {
+    commercialType: {
+      type: String,
+      enum: ['retail_shop', 'corporate_office', 'showroom', 'warehouse_godown', 'industrial_shed', 'co_working'],
+      default: 'retail_shop'
+    },
+    connectedPowerLoadHp: { type: Number, default: 5 }, // HP (Horsepower)
+    electricPhaseType: { type: String, enum: ['single_phase', 'three_phase'], default: 'three_phase' },
+    frontageRoadWidthFt: { type: Number, default: 40 }, // Road width in ft
+    ceilingHeightClearFt: { type: Number, default: 12 }, // Clear height in ft
+    floorLoadingCapacityTonPerSqM: { type: Number, default: 1 },
+    escalationPercentage: { type: Number, default: 5 }, // % yearly escalation
+    lockInPeriodMonths: { type: Number, default: 12 },
+    camChargesPerSqFtMonthly: { type: Number, default: 0 },
+    gstin: { type: String, default: '' },
+    isGstApplicable: { type: Boolean, default: false },
+    fireNocStatus: { type: Boolean, default: false },
+    buPermissionCertified: { type: Boolean, default: true },
+    loadingUnloadingDock: { type: Boolean, default: false },
+    goodsElevatorAvailable: { type: Boolean, default: false },
+    shutterWidthFt: { type: Number, default: 12 }
+  },
+
   // Location Details
+  city: { type: String, default: 'Rajkot', index: true },
   locality: { type: String, required: true, index: true },
   societyName: { type: String, required: true },
   fullAddress: { type: String, required: true },
@@ -118,6 +156,22 @@ const propertySchema = new mongoose.Schema({
     index: true
   },
   isVerifiedOwner: { type: Boolean, default: false },
+  ownershipDocumentUrl: { type: String, default: '' },
+  ownershipDocumentType: { 
+    type: String, 
+    enum: ['electricity_bill', 'property_tax_receipt', 'index_2_deed', 'society_maintenance_bill', 'none'],
+    default: 'none'
+  },
+  ownershipDocumentVerified: { type: Boolean, default: false },
+  verifiedDocumentDetails: {
+    consumerName: String,
+    consumerNumber: String,
+    discomProvider: String,
+    matchConfidence: Number,
+    verifiedAt: Date,
+    autoVerified: Boolean,
+    verificationNote: String
+  },
   viewCount: { type: Number, default: 0 },
   shortlistCount: { type: Number, default: 0 },
   lastFreshnessConfirmedAt: { type: Date, default: Date.now },
