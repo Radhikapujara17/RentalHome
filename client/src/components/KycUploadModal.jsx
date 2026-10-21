@@ -5,12 +5,14 @@ import toast from 'react-hot-toast';
 import ImageUploader from './ImageUploader';
 import { ShieldCheck, X, FileText, CheckCircle2 } from 'lucide-react';
 
-const KycUploadModal = ({ isOpen, onClose }) => {
+const KycUploadModal = ({ isOpen, onClose, onVerifiedSuccess }) => {
   const { user } = useAuth();
   const [docType, setDocType] = useState('electricity_bill');
   const [documentUrl, setDocumentUrl] = useState('');
+  const [consumerName, setConsumerName] = useState(user?.name || '');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [verifiedResult, setVerifiedResult] = useState(null);
 
   if (!isOpen) return null;
 
@@ -25,12 +27,19 @@ const KycUploadModal = ({ isOpen, onClose }) => {
       setSubmitting(true);
       const res = await api.post('/auth/kyc/submit', {
         kycDocumentUrl: documentUrl,
-        kycDocumentType: docType
+        kycDocumentType: docType,
+        consumerName: consumerName || user?.name
       });
 
       if (res.data.success) {
-        toast.success('Document submitted! RentNest team will verify within 24 hours.');
         setSubmitted(true);
+        setVerifiedResult(res.data);
+        if (res.data.verified) {
+          toast.success(res.data.message, { duration: 5000 });
+          if (onVerifiedSuccess) onVerifiedSuccess();
+        } else {
+          toast(res.data.message, { icon: 'ℹ️', duration: 5000 });
+        }
       }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to submit document');
@@ -40,33 +49,40 @@ const KycUploadModal = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
+      <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-4 max-h-[92vh] flex flex-col">
         
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-4 text-white flex items-center justify-between">
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-5 sm:px-6 py-4 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center space-x-2">
             <ShieldCheck className="w-5 h-5 text-emerald-300" />
-            <h3 className="text-base font-extrabold">Get "Verified Owner" Badge</h3>
+            <h3 className="text-sm sm:text-base font-extrabold">Get "Verified Owner" Badge</h3>
           </div>
           <button onClick={onClose} className="p-1 rounded-full hover:bg-white/20">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-6 space-y-5">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto">
           {submitted ? (
             <div className="text-center py-6 space-y-3">
-              <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
+              <div className={`w-12 h-12 ${verifiedResult?.verified ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'} rounded-full flex items-center justify-center mx-auto`}>
                 <CheckCircle2 className="w-6 h-6" />
               </div>
-              <h4 className="text-base font-extrabold text-slate-800">Verification Request Submitted</h4>
-              <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                Our operations team verifies your bill with PGVCL records to give your listings a 3x higher trust ranking.
+              <h4 className="text-base font-extrabold text-slate-800">
+                {verifiedResult?.verified ? 'Ownership Verified Successfully!' : 'Verification Submitted for Review'}
+              </h4>
+              <p className="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
+                {verifiedResult?.message || 'Our team verifies your bill with PGVCL records to give your listings a 3x higher trust ranking.'}
               </p>
+              {verifiedResult?.verified && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs font-bold text-emerald-800">
+                  ✓ "Verified Property" tag has been attached to all your listings.
+                </div>
+              )}
               <button
                 onClick={onClose}
-                className="px-6 py-2.5 bg-slate-900 text-white font-bold text-xs rounded-xl"
+                className="px-6 py-2.5 bg-slate-900 text-white font-bold text-xs rounded-xl shadow-md"
               >
                 Done
               </button>
@@ -74,7 +90,7 @@ const KycUploadModal = ({ isOpen, onClose }) => {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <p className="text-xs text-slate-600 leading-relaxed">
-                Direct landlords can earn the green <strong>Verified Owner</strong> badge by uploading a recent PGVCL electricity bill or municipal tax receipt.
+                Direct landlords can earn the green <strong>Verified Property & Owner</strong> badge by uploading a recent PGVCL electricity bill or municipal tax receipt. We verify that the document matches your account name (<strong>{user?.name}</strong>).
               </p>
 
               <div>
@@ -103,6 +119,20 @@ const KycUploadModal = ({ isOpen, onClose }) => {
                     RMC Property Tax Slip
                   </button>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Consumer / Owner Name Printed on Bill</label>
+                <input
+                  type="text"
+                  value={consumerName}
+                  onChange={(e) => setConsumerName(e.target.value)}
+                  placeholder={user?.name || "e.g. Jayesh Patel"}
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 outline-none focus:border-blue-600"
+                />
+                <span className="text-[10px] text-slate-400 mt-1 block">
+                  Must match or include your registered profile name ({user?.name}) for instant automated verification.
+                </span>
               </div>
 
               {/* Upload Dropzone */}

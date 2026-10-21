@@ -14,8 +14,8 @@ const ToLetPosterModal = ({ property, isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fade-in overflow-y-auto">
-      <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/70 backdrop-blur-sm animate-fade-in overflow-y-auto">
+      <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-4 sm:my-6 max-h-[92vh] flex flex-col">
         
         {/* Modal Controls Header */}
         <div className="bg-slate-900 px-6 py-4 text-white flex items-center justify-between print:hidden">
@@ -53,7 +53,9 @@ const ToLetPosterModal = ({ property, isOpen, onClose }) => {
           {/* Subheading */}
           <div className="space-y-1">
             <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
-              {property.bhk} Luxury Rental Flat
+              {property.category === 'commercial' 
+                ? (property.commercialDetails?.commercialType ? property.commercialDetails.commercialType.replace('_', ' ').toUpperCase() : 'COMMERCIAL PREMISES')
+                : `${property.bhk} Luxury Rental Flat`}
             </h2>
             <p className="text-lg font-bold text-blue-700 flex items-center justify-center space-x-1.5">
               <MapPin className="w-5 h-5 text-blue-600" />
@@ -65,20 +67,30 @@ const ToLetPosterModal = ({ property, isOpen, onClose }) => {
           <div className="grid grid-cols-2 gap-3 max-w-md mx-auto text-sm font-bold">
             <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
               <span className="text-slate-500 text-xs block">Monthly Rent</span>
-              <span className="text-xl font-black text-slate-900">₹{property.pricing.monthlyRent.toLocaleString()}</span>
+              <span className="text-xl font-black text-slate-900">₹{property.pricing?.monthlyRent?.toLocaleString() || 0}</span>
             </div>
             <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
               <span className="text-slate-500 text-xs block">Security Deposit</span>
-              <span className="text-xl font-black text-slate-900">₹{property.pricing.securityDeposit.toLocaleString()}</span>
+              <span className="text-xl font-black text-slate-900">₹{property.pricing?.securityDeposit?.toLocaleString() || 0}</span>
             </div>
             <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-              <span className="text-slate-500 text-xs block">Living Preference</span>
-              <span className="text-slate-800">{property.rules.foodPreference}</span>
-            </div>
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-              <span className="text-slate-500 text-xs block">Electricity Meter</span>
+              <span className="text-slate-500 text-xs block">
+                {property.category === 'commercial' ? 'Connected Power' : 'Living Preference'}
+              </span>
               <span className="text-slate-800">
-                {property.utilities.electricityMeterType === 'direct_govt_pgvcl' ? 'Govt PGVCL Meter' : 'Sub-meter'}
+                {property.category === 'commercial'
+                  ? `⚡ ${property.commercialDetails?.connectedPowerLoadHp || 10} HP (3-Phase)`
+                  : (property.rules?.foodPreference || 'Any Food Allowed')}
+              </span>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <span className="text-slate-500 text-xs block">
+                {property.category === 'commercial' ? 'Road Frontage' : 'Electricity Meter'}
+              </span>
+              <span className="text-slate-800">
+                {property.category === 'commercial'
+                  ? `🛣️ ${property.commercialDetails?.frontageRoadWidthFt || 40} Ft Main Road`
+                  : (property.utilities?.electricityMeterType === 'direct_govt_pgvcl' ? 'Govt PGVCL Meter' : 'Sub-meter')}
               </span>
             </div>
           </div>

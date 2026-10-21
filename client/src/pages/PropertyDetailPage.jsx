@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useCompare } from '../context/CompareContext';
+import { useWishlist } from '../context/WishlistContext';
 import ToLetPosterModal from '../components/ToLetPosterModal';
 import toast from 'react-hot-toast';
 import {
@@ -13,6 +14,7 @@ import {
   Leaf,
   Calendar,
   MessageCircle,
+  MessageSquare,
   Scale,
   Printer,
   Calculator,
@@ -23,13 +25,17 @@ import {
   Phone,
   Flame,
   Wifi,
-  Sparkles
+  Sparkles,
+  Building2,
+  Pencil,
+  Heart
 } from 'lucide-react';
 
 const PropertyDetailPage = () => {
   const { idOrSlug } = useParams();
-  const { user, isAuthenticated, setIsAuthModalOpen } = useAuth();
+  const { user, isAuthenticated, setIsAuthModalOpen, setIsChatOpen } = useAuth();
   const { toggleCompare, isCompared } = useCompare();
+  const { toggleWishlist, isSaved } = useWishlist();
 
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -89,11 +95,36 @@ const PropertyDetailPage = () => {
   const estimatedElectricBill = Math.round(estUnits * unitRate);
   const totalEstimatedOutflow = property.pricing.monthlyRent + (property.pricing.maintenanceAmount || 0) + estimatedElectricBill;
 
+  const isCommercial = property.category === 'commercial';
+  const currentUserId = user?._id || user?.id;
+  const ownerId = property?.owner?._id || property?.owner;
+  const isOwnerOrAdmin = Boolean(
+    user && property && (
+      (currentUserId && ownerId && currentUserId.toString() === ownerId.toString()) ||
+      user.role === 'admin'
+    )
+  );
+  const getCommercialTypeLabel = (type) => {
+    switch (type) {
+      case 'retail_shop': return 'Retail Shop';
+      case 'showroom': return 'Showroom';
+      case 'corporate_office': return 'Office Space';
+      case 'industrial_shed': return 'Industrial Shed';
+      case 'warehouse_godown': return 'Warehouse';
+      case 'co_working': return 'Co-Working';
+      default: return 'Commercial Space';
+    }
+  };
+
   // WhatsApp link
   const whatsappNum = property.owner?.phone ? property.owner.phone.replace(/[^0-9]/g, '') : '919876543202';
-  const whatsappMsg = encodeURIComponent(
-    `Hello! I saw your ${property.bhk} rental home at ${property.societyName}, ${property.locality} on RentNest (₹${property.pricing.monthlyRent}/mo). Is it available for a visit?`
-  );
+  const whatsappMsg = isCommercial
+    ? encodeURIComponent(
+        `Hello! I saw your commercial property "${property.title}" at ${property.societyName}, ${property.locality} on RentNest (₹${property.pricing.monthlyRent}/mo). Is it available for inspection?`
+      )
+    : encodeURIComponent(
+        `Hello! I saw your ${property.bhk} rental home at ${property.societyName}, ${property.locality} on RentNest (₹${property.pricing.monthlyRent}/mo). Is it available for a visit?`
+      );
   const whatsappUrl = `https://wa.me/${whatsappNum}?text=${whatsappMsg}`;
 
   const handleBookVisit = async (e) => {
@@ -135,6 +166,29 @@ const PropertyDetailPage = () => {
         </Link>
 
         <div className="flex items-center space-x-2">
+          {isOwnerOrAdmin && (
+            <Link
+              to={`/edit-property/${property._id}`}
+              className="flex items-center space-x-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-colors shadow-sm"
+              title="Edit Property Listing"
+            >
+              <Pencil className="w-4 h-4" />
+              <span>Edit Listing</span>
+            </Link>
+          )}
+
+          <button
+            onClick={() => toggleWishlist(property)}
+            className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
+              isSaved(property._id)
+                ? 'bg-rose-500 text-white border-rose-500 shadow-sm'
+                : 'bg-white text-slate-700 border-slate-200 hover:border-rose-400 hover:text-rose-500'
+            }`}
+          >
+            <Heart className={`w-4 h-4 ${isSaved(property._id) ? 'fill-white' : ''}`} />
+            <span>{isSaved(property._id) ? 'Saved' : 'Save'}</span>
+          </button>
+
           <button
             onClick={() => toggleCompare(property)}
             className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
@@ -200,9 +254,16 @@ const PropertyDetailPage = () => {
           {/* Header & Badges */}
           <div className="space-y-3 pb-6 border-b border-slate-200">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-blue-100 text-blue-800">
-                {property.bhk}
-              </span>
+              {isCommercial ? (
+                <span className="text-xs font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-800">
+                  🏢 {getCommercialTypeLabel(property.commercialDetails?.commercialType || property.propertyType)}
+                </span>
+              ) : (
+                <span className="text-xs font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-blue-100 text-blue-800">
+                  {property.bhk}
+                </span>
+              )}
+
               {property.pricing.brokerageAmount === 0 ? (
                 <span className="text-xs font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">
                   Zero Brokerage (Direct Owner)
@@ -213,9 +274,9 @@ const PropertyDetailPage = () => {
                 </span>
               )}
               {property.isVerifiedOwner && (
-                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-blue-600 text-white flex items-center space-x-1">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>Verified Landlord</span>
+                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-600 text-white flex items-center space-x-1 shadow-sm" title={property.verifiedDocumentDetails?.verificationNote || 'Ownership verified with authentic documents'}>
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-200" />
+                  <span>✓ Verified Property & Landlord</span>
                 </span>
               )}
               <span className="text-xs text-slate-400 font-mono ml-auto">
@@ -237,26 +298,110 @@ const PropertyDetailPage = () => {
           </div>
 
           {/* Quick Specifications */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
-              <span className="text-xs text-slate-500 block">Carpet Area</span>
-              <span className="text-base font-extrabold text-slate-900">{property.carpetAreaSqFt} sq.ft</span>
+          {isCommercial ? (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+                <span className="text-xs text-slate-500 block">Carpet Area</span>
+                <span className="text-base font-extrabold text-slate-900">{property.carpetAreaSqFt} sq.ft</span>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+                <span className="text-xs text-slate-500 block">Power Capacity</span>
+                <span className="text-base font-extrabold text-blue-700">
+                  ⚡ {property.commercialDetails?.connectedPowerLoadHp || 10} HP
+                </span>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+                <span className="text-xs text-slate-500 block">Road Frontage</span>
+                <span className="text-base font-extrabold text-slate-900">
+                  🛣️ {property.commercialDetails?.frontageRoadWidthFt || 40} Ft
+                </span>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+                <span className="text-xs text-slate-500 block">Ceiling Clearance</span>
+                <span className="text-base font-extrabold text-slate-900">
+                  📏 {property.commercialDetails?.ceilingHeightClearFt || 12} Ft Ht
+                </span>
+              </div>
             </div>
-            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
-              <span className="text-xs text-slate-500 block">Floor Position</span>
-              <span className="text-base font-extrabold text-slate-900">
-                {property.floorNumber === 0 ? 'Ground Floor' : `${property.floorNumber}th of ${property.totalFloors}`}
-              </span>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+                <span className="text-xs text-slate-500 block">Carpet Area</span>
+                <span className="text-base font-extrabold text-slate-900">{property.carpetAreaSqFt} sq.ft</span>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+                <span className="text-xs text-slate-500 block">Floor Position</span>
+                <span className="text-base font-extrabold text-slate-900">
+                  {property.floorNumber === 0 ? 'Ground Floor' : `${property.floorNumber}th of ${property.totalFloors}`}
+                </span>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+                <span className="text-xs text-slate-500 block">Facing / Vastu</span>
+                <span className="text-base font-extrabold text-slate-900">{property.facing} Facing</span>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+                <span className="text-xs text-slate-500 block">Furnishing Level</span>
+                <span className="text-base font-extrabold text-slate-900">{property.furnishingStatus}</span>
+              </div>
             </div>
-            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
-              <span className="text-xs text-slate-500 block">Facing / Vastu</span>
-              <span className="text-base font-extrabold text-slate-900">{property.facing} Facing</span>
+          )}
+
+          {/* Commercial Specifications & Industrial Reality Hub */}
+          {isCommercial && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-black text-slate-900 tracking-tight flex items-center space-x-2">
+                <Building2 className="w-5 h-5 text-indigo-600" />
+                <span>Commercial Specifications & Industrial Reality</span>
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-200 space-y-1.5">
+                  <div className="text-xs font-bold uppercase tracking-wider text-indigo-900 flex items-center space-x-1.5">
+                    <Zap className="w-4 h-4 text-indigo-600" />
+                    <span>Power Load & Electrical Phase</span>
+                  </div>
+                  <p className="text-xs text-slate-700 font-medium">
+                    Connected Load: <strong>{property.commercialDetails?.connectedPowerLoadHp || 10} HP</strong><br />
+                    Phase Type: <strong>{property.commercialDetails?.electricPhaseType === 'three_phase' ? 'Three-Phase High Capacity' : 'Single-Phase'}</strong>
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
+                  <div className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center space-x-1.5">
+                    <span className="text-sm">🛣️</span>
+                    <span>Road Frontage & Vehicle Clearance</span>
+                  </div>
+                  <p className="text-xs text-slate-700 font-medium">
+                    Road Width: <strong>{property.commercialDetails?.frontageRoadWidthFt || 40} Feet Main Road</strong><br />
+                    Clear Ceiling Height: <strong>{property.commercialDetails?.ceilingHeightClearFt || 12} Feet Clear Height</strong>
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200 space-y-1.5">
+                  <div className="text-xs font-bold uppercase tracking-wider text-emerald-900 flex items-center space-x-1.5">
+                    <span className="text-sm">📜</span>
+                    <span>Statutory & Compliance Approvals</span>
+                  </div>
+                  <p className="text-xs text-slate-700 font-medium">
+                    BU Permission: <strong>{property.commercialDetails?.buPermissionCertified ? 'Certified & Approved' : 'In Approval'}</strong><br />
+                    Fire Safety NOC: <strong>{property.commercialDetails?.fireNocStatus ? 'Fire NOC Compliant' : 'Standard Norms'}</strong>
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-1.5">
+                  <div className="text-xs font-bold uppercase tracking-wider text-amber-900 flex items-center space-x-1.5">
+                    <span className="text-sm">💼</span>
+                    <span>Commercial Lease Terms</span>
+                  </div>
+                  <p className="text-xs text-slate-700 font-medium">
+                    Lock-in Period: <strong>{property.commercialDetails?.lockInPeriodMonths || 12} Months</strong><br />
+                    Annual Escalation: <strong>{property.commercialDetails?.escalationPercentage || 5}% Yearly</strong>
+                    {property.commercialDetails?.gstin && <><br />GSTIN: <span className="font-mono text-[11px] font-bold">{property.commercialDetails.gstin}</span></>}
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
-              <span className="text-xs text-slate-500 block">Furnishing Level</span>
-              <span className="text-base font-extrabold text-slate-900">{property.furnishingStatus}</span>
-            </div>
-          </div>
+          )}
 
           {/* Living Reality Transparency Hub (Electricity & Water) */}
           <div className="space-y-4">
@@ -367,27 +512,29 @@ const PropertyDetailPage = () => {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs font-semibold">
               <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
                 <span className="text-slate-400 block text-[10px] uppercase">Food Culture</span>
-                <span className="text-slate-900 font-bold">{property.rules.foodPreference}</span>
+                <span className="text-slate-900 font-bold">{property.rules?.foodPreference || 'Any Food Allowed'}</span>
               </div>
               <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
-                <span className="text-slate-400 block text-[10px] uppercase">Allowed Tenants</span>
-                <span className="text-slate-900 font-bold">{property.rules.allowedTenants}</span>
+                <span className="text-slate-400 block text-[10px] uppercase">Allowed Occupants</span>
+                <span className="text-slate-900 font-bold">{property.rules?.allowedTenants || 'Any / All Welcome'}</span>
               </div>
               <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
-                <span className="text-slate-400 block text-[10px] uppercase">Gate Curfew</span>
-                <span className="text-slate-900 font-bold">{property.rules.gateCurfew}</span>
+                <span className="text-slate-400 block text-[10px] uppercase">Gate Access</span>
+                <span className="text-slate-900 font-bold">{property.rules?.gateCurfew || '24/7 Open Access'}</span>
               </div>
               <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
                 <span className="text-slate-400 block text-[10px] uppercase">Visitors / Guests</span>
-                <span className="text-slate-900 font-bold">{property.rules.visitorsAllowed ? 'Guests Permitted' : 'Restricted'}</span>
+                <span className="text-slate-900 font-bold">{property.rules?.visitorsAllowed ? 'Guests Permitted' : 'Restricted'}</span>
               </div>
               <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
                 <span className="text-slate-400 block text-[10px] uppercase">Pet Policy</span>
-                <span className="text-slate-900 font-bold">{property.rules.petsAllowed ? 'Pets Allowed' : 'No Pets'}</span>
+                <span className="text-slate-900 font-bold">{property.rules?.petsAllowed ? 'Pets Allowed' : 'No Pets'}</span>
               </div>
               <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
                 <span className="text-slate-400 block text-[10px] uppercase">Lock-in Period</span>
-                <span className="text-slate-900 font-bold">{property.pricing.lockInPeriodMonths || 6} Months</span>
+                <span className="text-slate-900 font-bold">
+                  {property.commercialDetails?.lockInPeriodMonths || property.pricing?.lockInPeriodMonths || 6} Months
+                </span>
               </div>
             </div>
           </div>
@@ -453,6 +600,22 @@ const PropertyDetailPage = () => {
                 <MessageCircle className="w-4 h-4" />
                 <span>Chat with Owner on WhatsApp</span>
               </a>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    toast('Please login to chat in app', { icon: '🔑' });
+                    setIsAuthModalOpen(true);
+                    return;
+                  }
+                  setIsChatOpen(true);
+                }}
+                className="w-full py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-2xl text-xs font-bold flex items-center justify-center space-x-2 transition-all"
+              >
+                <MessageSquare className="w-4 h-4 text-blue-600" />
+                <span>Chat in App with Landlord</span>
+              </button>
 
               <button
                 onClick={() => setIsVisitModalOpen(true)}
@@ -524,8 +687,8 @@ const PropertyDetailPage = () => {
 
       {/* Physical Visit Booking Modal */}
       {isVisitModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden p-6 space-y-5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
+          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-4 max-h-[92vh] overflow-y-auto p-5 sm:p-6 space-y-4 sm:space-y-5">
             <h3 className="text-base font-extrabold text-slate-900">
               Schedule Physical Property Visit
             </h3>

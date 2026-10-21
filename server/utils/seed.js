@@ -698,13 +698,268 @@ const seedData = async () => {
       }
     ];
 
-    await Property.insertMany(sampleProperties);
-    console.log(`🏠 Successfully Seeded ${sampleProperties.length} Authentic Rajkot Properties!`);
+    // Commercial Property Seed Listings
+    const commercialProperties = [
+      {
+        title: 'Prime Ground-Floor Showroom & Retail Space on 150 Ft Ring Road',
+        category: 'commercial',
+        owner: ownerUser._id,
+        isVerifiedOwner: true,
+        propertyType: 'showroom',
+        bhk: 'N/A',
+        carpetAreaSqFt: 1850,
+        floorNumber: 0,
+        totalFloors: 5,
+        facing: 'East',
+        locality: '150 Ft Ring Road',
+        societyName: 'Imperial Trade Center',
+        fullAddress: 'GF-04, Imperial Trade Center, Opposite Imperial Heights, 150 Ft Ring Road, Rajkot',
+        landmark: 'Opposite Imperial Heights & Near Big Bazaar Cross Road',
+        distanceToKeyLandmarks: [
+          { name: 'Imperial Heights', distanceKm: 0.1 },
+          { name: 'Crystal Mall', distanceKm: 1.5 },
+          { name: 'Mavdi Chowkadi', distanceKm: 1.8 }
+        ],
+        coordinates: { lat: 22.2815, lng: 70.7752 },
+        pricing: {
+          monthlyRent: 65000,
+          securityDeposit: 195000,
+          depositMonths: 3,
+          maintenanceAmount: 3500,
+          isMaintenanceIncluded: false,
+          brokerageAmount: 0, // Direct Owner Zero Brokerage
+          lockInPeriodMonths: 24,
+          noticePeriodDays: 60
+        },
+        commercialDetails: {
+          commercialType: 'showroom',
+          connectedPowerLoadHp: 25,
+          electricPhaseType: 'three_phase',
+          frontageRoadWidthFt: 150,
+          ceilingHeightClearFt: 14,
+          floorLoadingCapacityTonPerSqM: 1.5,
+          escalationPercentage: 5,
+          lockInPeriodMonths: 24,
+          camChargesPerSqFtMonthly: 3,
+          gstin: '24AAACR1234F1Z8',
+          isGstApplicable: true,
+          fireNocStatus: true,
+          buPermissionCertified: true,
+          loadingUnloadingDock: true,
+          goodsElevatorAvailable: false,
+          shutterWidthFt: 22
+        },
+        utilities: {
+          electricityMeterType: 'direct_govt_pgvcl',
+          subMeterUnitRate: 0,
+          waterSupplyType: '24_7_continuous',
+          waterScheduleHours: '24 Hours Continuous Commercial Supply',
+          waterSource: ['Municipal RMC/Narmada', 'Borewell Backup'],
+          drinkingWaterRo: true,
+          pipedGasAvailable: false,
+          fiberInternetPreWired: true
+        },
+        rules: {
+          allowedTenants: 'Any',
+          foodPreference: 'Any',
+          gateCurfew: '24/7 Open / Self-Key Access',
+          visitorsAllowed: true,
+          petsAllowed: false
+        },
+        furnishingStatus: 'Semi-Furnished',
+        furnishingItems: ['Toughened Glass Facade Frontage', 'Full Vitrified Tiling', 'LED Track Lights', 'Motorized Heavy Rolling Shutter'],
+        amenities: ['150 Ft Main Road Frontage', 'Basement Customer Parking (10+ Cars)', 'High Speed Fiber Ready', '24/7 CCTV & Security Guard', 'BU Permission Certified'],
+        photos: [
+          {
+            url: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1200&q=80',
+            roomTag: 'Showroom Glass Frontage',
+            isCoverPhoto: true
+          },
+          {
+            url: 'https://images.unsplash.com/photo-1555421689-d68471e189f2?auto=format&fit=crop&w=1200&q=80',
+            roomTag: 'Interior Retail Space',
+            isCoverPhoto: false
+          }
+        ]
+      },
+      {
+        title: 'Plug-and-Play Corporate IT / CA Office on Kalawad Road',
+        category: 'commercial',
+        owner: brokerUser._id,
+        isVerifiedOwner: true,
+        propertyType: 'corporate_office',
+        bhk: 'N/A',
+        carpetAreaSqFt: 1200,
+        floorNumber: 3,
+        totalFloors: 8,
+        facing: 'North-East',
+        locality: 'Kalawad Road',
+        societyName: 'Shivalik Business Hub',
+        fullAddress: 'Office 305, Shivalik Business Hub, Near Cosmoplex Cinema, Kalawad Road, Rajkot',
+        landmark: 'Near Cosmoplex Cinema & Atmiya University',
+        distanceToKeyLandmarks: [
+          { name: 'Cosmoplex Cinema', distanceKm: 0.3 },
+          { name: 'Atmiya University', distanceKm: 0.8 },
+          { name: 'Kotecha Chowk', distanceKm: 1.6 }
+        ],
+        coordinates: { lat: 22.2895, lng: 70.7695 },
+        pricing: {
+          monthlyRent: 38000,
+          securityDeposit: 114000,
+          depositMonths: 3,
+          maintenanceAmount: 2400,
+          isMaintenanceIncluded: false,
+          brokerageAmount: 19000, // 15 Days Brokerage
+          lockInPeriodMonths: 18,
+          noticePeriodDays: 45
+        },
+        commercialDetails: {
+          commercialType: 'corporate_office',
+          connectedPowerLoadHp: 15,
+          electricPhaseType: 'three_phase',
+          frontageRoadWidthFt: 80,
+          ceilingHeightClearFt: 11,
+          floorLoadingCapacityTonPerSqM: 1,
+          escalationPercentage: 7,
+          lockInPeriodMonths: 18,
+          camChargesPerSqFtMonthly: 2.5,
+          gstin: '24AAECK5678B1ZY',
+          isGstApplicable: true,
+          fireNocStatus: true,
+          buPermissionCertified: true,
+          loadingUnloadingDock: false,
+          goodsElevatorAvailable: true,
+          shutterWidthFt: 0
+        },
+        utilities: {
+          electricityMeterType: 'direct_govt_pgvcl',
+          subMeterUnitRate: 0,
+          waterSupplyType: '24_7_continuous',
+          waterScheduleHours: '24 Hours Continuous',
+          waterSource: ['Municipal RMC/Narmada'],
+          drinkingWaterRo: true,
+          pipedGasAvailable: false,
+          fiberInternetPreWired: true
+        },
+        rules: {
+          allowedTenants: 'Working Professionals Only',
+          foodPreference: 'Any',
+          gateCurfew: '24/7 Open / Self-Key Access',
+          visitorsAllowed: true,
+          petsAllowed: false
+        },
+        furnishingStatus: 'Fully Furnished',
+        furnishingItems: ['2 MD Private Cabins', '16 Ergonomic Workstations', '8-Seater Conference Room with Smart TV', 'Reception Desk with Waiting Lounge', 'Equipped Pantry with RO & Fridge'],
+        amenities: ['Central Air Conditioning Ready', 'Dual High Speed Elevators', '100% DG Power Backup for Common Areas', 'Fire Alarm & Sprinkler System', 'Reserved Covered Parking'],
+        photos: [
+          {
+            url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80',
+            roomTag: 'Corporate Workstation Hall',
+            isCoverPhoto: true
+          },
+          {
+            url: 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=1200&q=80',
+            roomTag: 'Conference Room & Cabin',
+            isCoverPhoto: false
+          }
+        ]
+      },
+      {
+        title: 'Heavy Industrial Shed & Warehouse (50 HP 3-Phase) in Metoda GIDC',
+        category: 'commercial',
+        owner: ownerUser._id,
+        isVerifiedOwner: true,
+        propertyType: 'industrial_shed',
+        bhk: 'N/A',
+        carpetAreaSqFt: 3500,
+        floorNumber: 0,
+        totalFloors: 1,
+        facing: 'North',
+        locality: 'Metoda GIDC',
+        societyName: 'Metoda Industrial Estate Gate 2',
+        fullAddress: 'Plot No. 142/B, Road No. 4, Metoda GIDC Phase-2, Lodhika Taluka, Rajkot',
+        landmark: 'Near Metoda Fire Station & Substation',
+        distanceToKeyLandmarks: [
+          { name: 'Metoda Substation', distanceKm: 0.4 },
+          { name: 'Rajkot-Kalawad Highway', distanceKm: 1.2 },
+          { name: 'Kishan Gate', distanceKm: 1.8 }
+        ],
+        coordinates: { lat: 22.2458, lng: 70.6725 },
+        pricing: {
+          monthlyRent: 52000,
+          securityDeposit: 156000,
+          depositMonths: 3,
+          maintenanceAmount: 0,
+          isMaintenanceIncluded: true,
+          brokerageAmount: 0, // Direct Owner
+          lockInPeriodMonths: 36,
+          noticePeriodDays: 90
+        },
+        commercialDetails: {
+          commercialType: 'industrial_shed',
+          connectedPowerLoadHp: 50,
+          electricPhaseType: 'three_phase',
+          frontageRoadWidthFt: 60,
+          ceilingHeightClearFt: 24,
+          floorLoadingCapacityTonPerSqM: 4.5,
+          escalationPercentage: 5,
+          lockInPeriodMonths: 36,
+          camChargesPerSqFtMonthly: 0,
+          gstin: '24BBFPM9876C1Z3',
+          isGstApplicable: true,
+          fireNocStatus: true,
+          buPermissionCertified: true,
+          loadingUnloadingDock: true,
+          goodsElevatorAvailable: false,
+          shutterWidthFt: 20
+        },
+        utilities: {
+          electricityMeterType: 'direct_govt_pgvcl',
+          subMeterUnitRate: 0,
+          waterSupplyType: '24_7_continuous',
+          waterScheduleHours: '24 Hours Industrial Water',
+          waterSource: ['GIDC Industrial Pipeline', 'Borewell'],
+          drinkingWaterRo: true,
+          pipedGasAvailable: false,
+          fiberInternetPreWired: true
+        },
+        rules: {
+          allowedTenants: 'Any',
+          foodPreference: 'Any',
+          gateCurfew: '24/7 Open / Self-Key Access',
+          visitorsAllowed: true,
+          petsAllowed: false
+        },
+        furnishingStatus: 'Unfurnished',
+        furnishingItems: ['Crane Gantry Structure Ready (5 Ton capacity)', 'Trimix Heavy Industrial Concrete Flooring', 'Overhead Water Tank (10,000L)', 'Attached Office Cabin & Worker Restroom'],
+        amenities: ['50 HP Dedicated PGVCL Industrial Connection', '60 Ft Road for Multi-Axle Container Entry', 'Independent Borewell & GIDC Water Connection', 'Rainwater Harvesting Pit', 'Heavy Truck Loading Dock'],
+        photos: [
+          {
+            url: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1200&q=80',
+            roomTag: 'Industrial Shed Interior & Height',
+            isCoverPhoto: true
+          },
+          {
+            url: 'https://images.unsplash.com/photo-1587293852726-70cdb56c2866?auto=format&fit=crop&w=1200&q=80',
+            roomTag: 'Loading Bay & Entry Gate',
+            isCoverPhoto: false
+          }
+        ]
+      }
+    ];
+
+    const allProperties = [
+      ...sampleProperties.map(p => ({ category: 'residential', ...p })),
+      ...commercialProperties
+    ];
+
+    await Property.insertMany(allProperties);
+    console.log(`🏢 Successfully Seeded ${allProperties.length} Properties (${sampleProperties.length} Residential + ${commercialProperties.length} Commercial)!`);
 
     if (require.main === module) {
       process.exit(0);
     }
-    return { success: true, count: sampleProperties.length };
+    return { success: true, count: allProperties.length };
   } catch (error) {
     console.error('❌ Seeding error:', error);
     if (require.main === module) {
