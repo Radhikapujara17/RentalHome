@@ -56,11 +56,11 @@ const RoommatesPage = () => {
             <Users className="w-3.5 h-3.5 text-blue-400" />
             <span>Students & Young Working Professionals</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black tracking-tight leading-tight">
-            Find Flatmates & Shared Rooms in Rajkot
+          <h1 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight">
+            Find Flatmates & Shared Rooms
           </h1>
           <p className="text-xs sm:text-sm text-slate-300 font-normal leading-relaxed">
-            Split rent and bills safely. Browse verified room vacancies near Saurashtra University, AIIMS, and 150 Ft Ring Road.
+            Split rent and bills safely. Browse verified room and flatmate vacancies for students and working professionals.
           </p>
         </div>
 

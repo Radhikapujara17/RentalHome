@@ -1,5 +1,5 @@
-import React from 'react';
-import { Search, RotateCcw, Zap, Droplets, Leaf, Shield, Building2, Flame, Award, MapPin } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, RotateCcw, Zap, Droplets, Leaf, Shield, Building2, Flame, Award, MapPin, SlidersHorizontal, ChevronDown, ChevronUp } from 'lucide-react';
 
 const CITY_LOCALITIES = {
   Rajkot: [
@@ -74,6 +74,7 @@ const ROAD_WIDTH_OPTIONS = [
 ];
 
 const FilterBar = ({ filters, setFilters, onReset }) => {
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const isCommercial = filters.category === 'commercial';
   const activeCity = filters.city || 'Rajkot';
   const currentLocalities = CITY_LOCALITIES[activeCity] || [
@@ -86,14 +87,28 @@ const FilterBar = ({ filters, setFilters, onReset }) => {
     'Alkapuri'
   ];
 
+  const activeFiltersCount = [
+    filters.locality && filters.locality !== 'All Localities',
+    filters.bhk && filters.bhk !== 'All BHK',
+    filters.commercialType,
+    filters.minPowerLoadHp,
+    filters.minRoadWidthFt,
+    filters.zeroBrokerage === 'true',
+    filters.meterType,
+    filters.waterType,
+    filters.foodPreference,
+    filters.buPermissionCertified === 'true',
+    filters.fireNocStatus === 'true'
+  ].filter(Boolean).length;
+
   const handleChange = (field, value) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3">
-      {/* Search & Main Selectors */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+    <div className="bg-white rounded-2xl border border-slate-200 p-3 sm:p-4 shadow-sm space-y-3">
+      {/* Primary Row: City & Search (Always Visible) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-3">
         
         {/* City Selector */}
         <div>
@@ -128,8 +143,36 @@ const FilterBar = ({ filters, setFilters, onReset }) => {
           />
         </div>
 
-        {/* Locality Selector */}
-        <div>
+        {/* Mobile Toggle Button for Advanced Filters */}
+        <div className="sm:hidden flex items-center justify-between gap-2 pt-1">
+          <button
+            type="button"
+            onClick={() => setIsMobileFiltersOpen(!isMobileFiltersOpen)}
+            className="flex-1 py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold flex items-center justify-center space-x-2 transition-colors"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5 text-blue-600" />
+            <span>{isMobileFiltersOpen ? 'Hide Filters' : 'Filter Options'}</span>
+            {activeFiltersCount > 0 && (
+              <span className="bg-blue-600 text-white text-[10px] px-1.5 py-0.2 rounded-full font-black">
+                {activeFiltersCount}
+              </span>
+            )}
+            {isMobileFiltersOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
+
+          {activeFiltersCount > 0 && (
+            <button
+              type="button"
+              onClick={onReset}
+              className="py-2 px-3 text-xs font-bold text-slate-500 hover:text-slate-800 bg-slate-50 rounded-xl border border-slate-200"
+            >
+              Reset
+            </button>
+          )}
+        </div>
+
+        {/* Locality Selector (Desktop always, Mobile when expanded) */}
+        <div className={`${isMobileFiltersOpen ? 'block' : 'hidden sm:block'}`}>
           <select
             value={filters.locality || 'All Localities'}
             onChange={(e) => handleChange('locality', e.target.value === 'All Localities' ? '' : e.target.value)}
@@ -141,9 +184,9 @@ const FilterBar = ({ filters, setFilters, onReset }) => {
           </select>
         </div>
 
-        {/* Dynamic Selector 3: BHK (Residential) OR Commercial Type (Commercial) */}
-        {!isCommercial ? (
-          <div>
+        {/* BHK or Commercial Type */}
+        <div className={`${isMobileFiltersOpen ? 'block' : 'hidden sm:block'}`}>
+          {!isCommercial ? (
             <select
               value={filters.bhk || 'All BHK'}
               onChange={(e) => handleChange('bhk', e.target.value === 'All BHK' ? '' : e.target.value)}
@@ -153,9 +196,7 @@ const FilterBar = ({ filters, setFilters, onReset }) => {
                 <option key={b} value={b}>{b}</option>
               ))}
             </select>
-          </div>
-        ) : (
-          <div>
+          ) : (
             <select
               value={filters.commercialType || ''}
               onChange={(e) => handleChange('commercialType', e.target.value)}
@@ -165,11 +206,11 @@ const FilterBar = ({ filters, setFilters, onReset }) => {
                 <option key={t.value} value={t.value}>{t.label}</option>
               ))}
             </select>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Sort */}
-        <div>
+        <div className={`${isMobileFiltersOpen ? 'block' : 'hidden sm:block'}`}>
           <select
             value={filters.sort || 'newest'}
             onChange={(e) => handleChange('sort', e.target.value)}
@@ -184,6 +225,9 @@ const FilterBar = ({ filters, setFilters, onReset }) => {
         </div>
 
       </div>
+
+      {/* Collapsible Section for Mobile, Always block on sm+ */}
+      <div className={`space-y-3 ${isMobileFiltersOpen ? 'block' : 'hidden sm:block'}`}>
 
       {/* Commercial Secondary Selectors (Road & Power) if Commercial is Active */}
       {isCommercial && (
@@ -333,6 +377,7 @@ const FilterBar = ({ filters, setFilters, onReset }) => {
           <span>Reset</span>
         </button>
 
+      </div>
       </div>
     </div>
   );

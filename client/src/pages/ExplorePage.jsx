@@ -13,7 +13,7 @@ const ExplorePage = () => {
   const [loading, setLoading] = useState(true);
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [hoveredPropertyId, setHoveredPropertyId] = useState(null);
-  const [viewMode, setViewMode] = useState('split'); // 'split', 'list', 'map' for mobile
+  const [viewMode, setViewMode] = useState('list'); // 'list' or 'map' on mobile screens
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
 
   const initialCity = searchParams.get('city') || localStorage.getItem('rentnest_selected_city') || 'Rajkot';
@@ -142,10 +142,12 @@ const ExplorePage = () => {
       </div>
 
       {/* Header and Mobile View Toggle */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-            {isCommercial ? 'Commercial Spaces for Rent in Rajkot' : 'Rental Homes in Rajkot, Gujarat'}
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+            {isCommercial 
+              ? `Commercial Spaces for Rent in ${filters.city || 'Gujarat'}` 
+              : `Rental Homes in ${filters.city || 'Gujarat'}`}
           </h1>
           <p className="text-xs text-slate-500 font-medium">
             {isCommercial
@@ -161,7 +163,7 @@ const ExplorePage = () => {
             className="flex items-center space-x-1.5 px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold rounded-xl transition-all shadow-sm"
           >
             <Bell className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Save Search & Alert Me</span>
+            <span>Save Search & Alert</span>
           </button>
 
           {/* Mobile View Toggle */}
@@ -254,6 +256,27 @@ const ExplorePage = () => {
         onClose={() => setIsAlertModalOpen(false)}
         filters={filters}
       />
+
+      {/* Floating Mobile Map/List Toggle Button */}
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 md:hidden">
+        <button
+          onClick={() => setViewMode(viewMode === 'map' ? 'list' : 'map')}
+          className="flex items-center space-x-2 bg-slate-900/95 hover:bg-slate-900 text-white font-black text-xs px-5 py-3 rounded-full shadow-2xl backdrop-blur-md border border-white/20 transition-transform active:scale-95"
+          aria-label="Toggle between map and list view"
+        >
+          {viewMode === 'map' ? (
+            <>
+              <List className="w-4 h-4 text-blue-400" />
+              <span>Show Property List ({properties.length})</span>
+            </>
+          ) : (
+            <>
+              <Map className="w-4 h-4 text-blue-400" />
+              <span>Interactive Map View</span>
+            </>
+          )}
+        </button>
+      </div>
 
     </div>
   );

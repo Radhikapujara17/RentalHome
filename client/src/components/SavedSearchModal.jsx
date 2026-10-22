@@ -56,7 +56,7 @@ const SavedSearchModal = ({ isOpen, onClose, filters }) => {
         </div>
 
         <p className="text-xs text-slate-600 leading-relaxed">
-          Be the first to know! As soon as an owner lists a property matching your active filters in <strong>{filters.locality || 'Rajkot'}</strong>, we'll send a direct WhatsApp message.
+          Be the first to know! As soon as an owner lists a property matching your active filters in <strong>{filters.locality || filters.city || 'Gujarat'}</strong>, we'll send a direct WhatsApp message.
         </p>
 
         {/* Current Active Criteria Chips */}

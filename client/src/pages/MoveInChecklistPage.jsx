@@ -129,7 +129,7 @@ const MoveInChecklistPage = () => {
                       {item.name}
                     </div>
 
-                    <div className="flex items-center space-x-1">
+                    <div className="flex flex-wrap items-center gap-1">
                       {['Excellent', 'Good', 'Scratched/Stained', 'Damaged'].map((status) => (
                         <button
                           key={status}

@@ -28,7 +28,9 @@ import {
   Sparkles,
   Building2,
   Pencil,
-  Heart
+  Heart,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 const PropertyDetailPage = () => {
@@ -153,85 +155,119 @@ const PropertyDetailPage = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8 pb-28 lg:pb-8">
       
       {/* Top Navigation & Actions */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2.5">
         <Link
           to="/explore"
-          className="flex items-center space-x-2 text-xs font-bold text-slate-600 hover:text-blue-600 transition-colors"
+          className="flex items-center space-x-1.5 text-xs font-bold text-slate-600 hover:text-blue-600 transition-colors py-1"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Explore</span>
         </Link>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
           {isOwnerOrAdmin && (
             <Link
               to={`/edit-property/${property._id}`}
-              className="flex items-center space-x-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-colors shadow-sm"
+              className="flex items-center space-x-1.5 px-3 py-1.5 sm:py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-colors shadow-sm"
               title="Edit Property Listing"
             >
-              <Pencil className="w-4 h-4" />
-              <span>Edit Listing</span>
+              <Pencil className="w-3.5 h-3.5" />
+              <span>Edit</span>
             </Link>
           )}
 
           <button
             onClick={() => toggleWishlist(property)}
-            className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 sm:py-2 rounded-xl text-xs font-bold border transition-all ${
               isSaved(property._id)
                 ? 'bg-rose-500 text-white border-rose-500 shadow-sm'
                 : 'bg-white text-slate-700 border-slate-200 hover:border-rose-400 hover:text-rose-500'
             }`}
           >
-            <Heart className={`w-4 h-4 ${isSaved(property._id) ? 'fill-white' : ''}`} />
+            <Heart className={`w-3.5 h-3.5 ${isSaved(property._id) ? 'fill-white' : ''}`} />
             <span>{isSaved(property._id) ? 'Saved' : 'Save'}</span>
           </button>
 
           <button
             onClick={() => toggleCompare(property)}
-            className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 sm:py-2 rounded-xl text-xs font-bold border transition-all ${
               isCompared(property._id)
                 ? 'bg-blue-600 text-white border-blue-600'
                 : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400'
             }`}
           >
-            <Scale className="w-4 h-4" />
-            <span>{isCompared(property._id) ? 'Shortlisted' : 'Add to Compare'}</span>
+            <Scale className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">{isCompared(property._id) ? 'Shortlisted' : 'Add to Compare'}</span>
+            <span className="sm:hidden">{isCompared(property._id) ? 'Compared' : 'Compare'}</span>
           </button>
 
           <button
             onClick={() => setIsPosterOpen(true)}
-            className="flex items-center space-x-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors"
+            className="flex items-center space-x-1.5 px-3 py-1.5 sm:py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors"
           >
-            <Printer className="w-4 h-4 text-slate-600" />
-            <span>Print TO LET Poster</span>
+            <Printer className="w-3.5 h-3.5 text-slate-600" />
+            <span className="hidden sm:inline">Print TO LET Poster</span>
+            <span className="sm:hidden">Print</span>
           </button>
         </div>
       </div>
 
-      {/* Gallery Section */}
+      {/* Gallery Section with Touch Carousel Controls */}
       <div className="space-y-3">
-        <div className="relative aspect-[21/9] sm:aspect-[21/10] bg-slate-900 rounded-3xl overflow-hidden shadow-lg border border-slate-200">
+        <div className="relative aspect-[16/10] sm:aspect-[21/10] bg-slate-900 rounded-2xl sm:rounded-3xl overflow-hidden shadow-lg border border-slate-200">
           <img
             src={property.photos?.[activePhotoIdx]?.url || property.photos?.[0]?.url}
             alt={property.title}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover transition-opacity duration-300"
           />
-          <div className="absolute bottom-4 left-4 bg-slate-950/70 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-xl border border-white/20">
+
+          {/* Previous / Next Controls on Image */}
+          {property.photos && property.photos.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActivePhotoIdx((prev) => (prev > 0 ? prev - 1 : property.photos.length - 1));
+                }}
+                className="absolute top-1/2 left-2 sm:left-4 -translate-y-1/2 w-8 sm:w-10 h-8 sm:h-10 rounded-full bg-slate-900/60 hover:bg-slate-900 text-white flex items-center justify-center transition-all backdrop-blur-sm"
+                aria-label="Previous photo"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActivePhotoIdx((prev) => (prev < property.photos.length - 1 ? prev + 1 : 0));
+                }}
+                className="absolute top-1/2 right-2 sm:right-4 -translate-y-1/2 w-8 sm:w-10 h-8 sm:h-10 rounded-full bg-slate-900/60 hover:bg-slate-900 text-white flex items-center justify-center transition-all backdrop-blur-sm"
+                aria-label="Next photo"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+              <div className="absolute top-3 sm:top-4 right-3 sm:right-4 bg-slate-950/70 backdrop-blur-md text-white text-[10px] sm:text-xs font-bold px-2.5 py-1 rounded-lg">
+                {activePhotoIdx + 1} / {property.photos.length}
+              </div>
+            </>
+          )}
+
+          <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 bg-slate-950/70 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-xl border border-white/20">
             {property.photos?.[activePhotoIdx]?.roomTag || 'Living Room'}
           </div>
         </div>
 
         {/* Thumbnails */}
         {property.photos && property.photos.length > 1 && (
-          <div className="flex items-center space-x-3 overflow-x-auto pb-2">
+          <div className="flex items-center space-x-2.5 sm:space-x-3 overflow-x-auto pb-2 scrollbar-thin">
             {property.photos.map((photo, idx) => (
               <button
                 key={idx}
                 onClick={() => setActivePhotoIdx(idx)}
-                className={`relative w-24 h-16 rounded-xl overflow-hidden border-2 shrink-0 transition-all ${
+                className={`relative w-20 sm:w-24 h-14 sm:h-16 rounded-xl overflow-hidden border-2 shrink-0 transition-all ${
                   activePhotoIdx === idx ? 'border-blue-600 ring-2 ring-blue-500/30' : 'border-transparent opacity-70 hover:opacity-100'
                 }`}
               >
@@ -778,6 +814,40 @@ const PropertyDetailPage = () => {
         isOpen={isPosterOpen}
         onClose={() => setIsPosterOpen(false)}
       />
+
+      {/* Mobile Floating Sticky CTA Bar */}
+      <div className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 py-3 flex items-center justify-between shadow-2xl lg:hidden">
+        <div>
+          <div className="flex items-baseline space-x-1">
+            <span className="text-xl font-black text-slate-900">₹{property.pricing.monthlyRent.toLocaleString()}</span>
+            <span className="text-[10px] text-slate-500 font-semibold">/mo</span>
+          </div>
+          <div className="text-[10px] text-slate-400 font-medium">
+            Deposit: ₹{property.pricing.securityDeposit.toLocaleString()}
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3.5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-md active:scale-95 transition-transform"
+            aria-label="Chat with Owner on WhatsApp"
+          >
+            <MessageCircle className="w-4 h-4" />
+            <span>WhatsApp</span>
+          </a>
+
+          <button
+            onClick={() => setIsVisitModalOpen(true)}
+            className="px-3.5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-md active:scale-95 transition-transform"
+          >
+            <Calendar className="w-4 h-4" />
+            <span>Visit Pass</span>
+          </button>
+        </div>
+      </div>
 
     </div>
   );

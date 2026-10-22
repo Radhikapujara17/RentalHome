@@ -447,30 +447,39 @@ const PostPropertyPage = () => {
       </div>
 
       {/* Step Indicators */}
-      <div className="flex items-center justify-between relative px-4">
-        {[1, 2, 3, 4, 5].map((s) => (
-          <div key={s} className="flex flex-col items-center z-10">
-            <button
-              type="button"
-              onClick={() => {
-                if (step === 1 && !formData.title && s > 1) {
-                  toast.error('Please enter a listing title');
-                  return;
-                }
-                setStep(s);
-              }}
-              className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs transition-colors cursor-pointer ${
-                step >= s ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
-              }`}
-            >
-              {s}
-            </button>
-            <span className="text-[10px] font-bold text-slate-500 mt-1 hidden sm:block">
-              {s === 1 ? 'Basics' : s === 2 ? 'Location' : s === 3 ? 'Pricing' : s === 4 ? 'Utilities' : 'Rules & Photos'}
-            </span>
-          </div>
-        ))}
-        <div className="absolute top-4 inset-x-8 h-0.5 bg-slate-200 -z-0"></div>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between relative px-2 sm:px-4">
+          {[1, 2, 3, 4, 5].map((s) => (
+            <div key={s} className="flex flex-col items-center z-10">
+              <button
+                type="button"
+                onClick={() => {
+                  if (step === 1 && !formData.title && s > 1) {
+                    toast.error('Please enter a listing title');
+                    return;
+                  }
+                  setStep(s);
+                }}
+                className={`w-9 sm:w-10 h-9 sm:h-10 rounded-xl flex items-center justify-center font-bold text-xs transition-colors cursor-pointer ${
+                  step >= s ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
+                }`}
+              >
+                {step > s ? <Check className="w-4 h-4 stroke-[3]" /> : s}
+              </button>
+              <span className="text-[10px] font-bold text-slate-500 mt-1 hidden sm:block">
+                {s === 1 ? 'Basics' : s === 2 ? 'Location' : s === 3 ? 'Pricing' : s === 4 ? 'Utilities' : 'Features & Docs'}
+              </span>
+            </div>
+          ))}
+          <div className="absolute top-4 sm:top-5 inset-x-6 sm:inset-x-8 h-0.5 bg-slate-200 -z-0"></div>
+        </div>
+
+        {/* Mobile Step Status Badge */}
+        <div className="sm:hidden text-center">
+          <span className="inline-block bg-blue-50 text-blue-700 font-extrabold text-xs px-3 py-1 rounded-full border border-blue-200">
+            Step {step} of 5: {step === 1 ? 'Basics & Specs' : step === 2 ? 'Location & Society' : step === 3 ? 'Pricing & Terms' : step === 4 ? 'Electricity & Water' : 'Features, Photos & Verification'}
+          </span>
+        </div>
       </div>
 
       {/* Wizard Card Form */}
