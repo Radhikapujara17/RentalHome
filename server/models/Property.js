@@ -17,7 +17,8 @@ const propertySchema = new mongoose.Schema({
     type: String, 
     enum: [
       'flat', 'independent_house', 'row_house', 'penthouse', 'pg_coliving', 'shared_room',
-      'retail_shop', 'corporate_office', 'showroom', 'warehouse_godown', 'industrial_shed', 'co_working'
+      'retail_shop', 'corporate_office', 'showroom', 'warehouse_godown', 'industrial_shed', 'co_working',
+      'commercial'
     ],
     default: 'flat',
     required: true 

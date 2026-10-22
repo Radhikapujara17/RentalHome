@@ -43,7 +43,7 @@ const ToLetPosterModal = ({ property, isOpen, onClose }) => {
         </div>
 
         {/* Printable Poster Canvas */}
-        <div ref={printRef} className="p-8 sm:p-12 text-center bg-white space-y-6">
+        <div ref={printRef} className="p-6 sm:p-12 text-center bg-white space-y-6 overflow-y-auto">
           
           {/* Top Header Badge */}
           <div className="inline-block bg-rose-600 text-white font-black text-2xl sm:text-3xl px-8 py-3 rounded-2xl tracking-widest uppercase shadow-lg transform -rotate-1">

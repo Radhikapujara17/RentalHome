@@ -177,13 +177,13 @@ const Navbar = () => {
           </div>
 
           {/* Right Action Bar */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 sm:space-x-3">
             
             {/* If NOT logged in: Absolutely NO menu, NO chat, NO post buttons. ONLY clean Login / Sign Up button */}
             {!isAuthenticated ? (
               <Link
                 to="/login"
-                className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-95"
+                className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl shadow-md shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-95"
               >
                 <User className="w-4 h-4" />
                 <span>Login / Sign Up</span>
@@ -194,8 +194,9 @@ const Navbar = () => {
                 {/* Wishlist Quick Access */}
                 <Link
                   to="/dashboard"
-                  className="p-2.5 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 transition-colors relative"
+                  className="p-2 sm:p-2.5 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 transition-colors relative"
                   title="View Saved Wishlist"
+                  aria-label="View Saved Wishlist"
                 >
                   <Heart className={`w-4 h-4 ${savedCount > 0 ? 'text-rose-500 fill-rose-500' : ''}`} />
                   {savedCount > 0 && (
@@ -208,8 +209,9 @@ const Navbar = () => {
                 {/* Live Chat Trigger Button */}
                 <button
                   onClick={() => setIsChatOpen(true)}
-                  className="p-2.5 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-600 transition-colors relative"
+                  className="p-2 sm:p-2.5 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-600 transition-colors relative"
                   title="Open In-App Chat"
+                  aria-label="Open In-App Chat"
                 >
                   <MessageSquare className="w-4 h-4" />
                   <span className="w-2 h-2 rounded-full bg-blue-600 absolute top-2 right-2 ring-2 ring-white"></span>
@@ -219,21 +221,22 @@ const Navbar = () => {
                 {shortlist.length > 0 && user?.role === 'tenant' && (
                   <button
                     onClick={() => setIsCompareModalOpen(true)}
-                    className="relative flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-semibold text-xs transition-all shadow-sm"
+                    className="relative flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-semibold text-xs transition-all shadow-sm"
+                    title="Compare properties"
                   >
                     <Scale className="w-4 h-4 text-indigo-600" />
-                    <span className="hidden sm:inline">Compare</span>
+                    <span className="hidden md:inline">Compare</span>
                     <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px]">
                       {shortlist.length}
                     </span>
                   </button>
                 )}
 
-                {/* Post Property CTA: Shown for Owner, Broker, Admin */}
+                {/* Post Property CTA: Shown on sm+ screens */}
                 {(user?.role === 'owner' || user?.role === 'broker' || user?.role === 'admin') && (
                   <Link
                     to="/post-property"
-                    className="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl shadow-sm transition-transform active:scale-95"
+                    className="hidden sm:flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl shadow-sm transition-transform active:scale-95"
                   >
                     <PlusCircle className="w-4 h-4 text-blue-400" />
                     <span>{user?.role === 'broker' ? 'Post Listing' : 'Post Property'}</span>
@@ -241,10 +244,11 @@ const Navbar = () => {
                 )}
 
                 {/* User Menu & Avatar */}
-                <div className="flex items-center space-x-2 pl-2 border-l border-slate-200">
+                <div className="flex items-center space-x-1 sm:space-x-2 pl-1 sm:pl-2 border-l border-slate-200">
                   <Link
                     to={user?.role === 'admin' ? '/admin' : '/dashboard'}
-                    className="flex items-center space-x-2 p-1.5 rounded-xl hover:bg-slate-100 transition-colors"
+                    className="flex items-center space-x-2 p-1 sm:p-1.5 rounded-xl hover:bg-slate-100 transition-colors"
+                    title="User Dashboard"
                   >
                     <img
                       src={user?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80'}
@@ -265,7 +269,7 @@ const Navbar = () => {
                       navigate('/login');
                     }}
                     title="Logout"
-                    className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                    className="hidden sm:flex p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                   >
                     <LogOut className="w-4 h-4" />
                   </button>
@@ -277,7 +281,7 @@ const Navbar = () => {
                   className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 lg:hidden"
                   aria-label="Toggle navigation menu"
                 >
-                  {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                  {mobileMenuOpen ? <X className="w-5 h-5 text-slate-900" /> : <Menu className="w-5 h-5" />}
                 </button>
               </>
             )}

@@ -107,7 +107,7 @@ const AdminDashboardPage = () => {
               <Home className="w-4 h-4 text-emerald-600" />
             </div>
             <div className="text-2xl font-black text-slate-900">{metrics.totalProperties}</div>
-            <span className="text-[11px] text-emerald-600 font-semibold">Rajkot inventory</span>
+            <span className="text-[11px] text-emerald-600 font-semibold">Gujarat inventory</span>
           </div>
 
           <div className="p-5 rounded-3xl bg-white border border-slate-200 shadow-sm space-y-1">

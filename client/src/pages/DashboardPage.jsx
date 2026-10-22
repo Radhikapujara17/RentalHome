@@ -215,24 +215,24 @@ const DashboardPage = () => {
                 {properties.map((prop) => (
                   <div
                     key={prop._id}
-                    className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between gap-4"
+                    className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4"
                   >
                     <div className="flex items-center space-x-3">
                       <img
                         src={prop.photos?.[0]?.url || 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=200&q=80'}
                         alt={prop.title}
-                        className="w-16 h-16 rounded-xl object-cover"
+                        className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover shrink-0"
                       />
-                      <div>
+                      <div className="min-w-0">
                         <div className="flex items-center space-x-2">
-                          <h4 className="text-xs font-extrabold text-slate-900 line-clamp-1">{prop.title}</h4>
+                          <h4 className="text-xs font-extrabold text-slate-900 truncate">{prop.title}</h4>
                           {prop.isVerifiedOwner && (
                             <span className="px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[9px] font-black shrink-0">
                               ✓ Verified
                             </span>
                           )}
                         </div>
-                        <p className="text-[11px] text-slate-500 font-medium">
+                        <p className="text-[11px] text-slate-500 font-medium truncate">
                           {prop.societyName}, {prop.locality} {prop.city ? `(${prop.city})` : ''} • {prop.bhk}
                         </p>
                         <div className="flex items-center space-x-2 mt-0.5">
@@ -249,7 +249,7 @@ const DashboardPage = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 self-end sm:self-center shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 w-full sm:w-auto justify-end">
                       <Link
                         to={`/property/${prop.slug || prop._id}`}
                         className="p-2 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 transition-colors"
@@ -294,24 +294,24 @@ const DashboardPage = () => {
                 {wishlist.map((prop) => (
                   <div
                     key={prop._id}
-                    className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between gap-4"
+                    className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4"
                   >
                     <div className="flex items-center space-x-3">
                       <img
                         src={prop.photos?.[0]?.url || 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=200&q=80'}
                         alt={prop.title}
-                        className="w-16 h-16 rounded-xl object-cover"
+                        className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover shrink-0"
                       />
-                      <div>
-                        <h4 className="text-xs font-extrabold text-slate-900 line-clamp-1">{prop.title}</h4>
-                        <p className="text-[11px] text-slate-500 font-medium">
+                      <div className="min-w-0">
+                        <h4 className="text-xs font-extrabold text-slate-900 truncate">{prop.title}</h4>
+                        <p className="text-[11px] text-slate-500 font-medium truncate">
                           {prop.societyName}, {prop.locality} {prop.city ? `(${prop.city})` : ''} • {prop.bhk}
                         </p>
                         <span className="text-xs font-black text-rose-600">₹{prop.pricing?.monthlyRent?.toLocaleString()}/mo</span>
                       </div>
                     </div>
 
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 self-end sm:self-center shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 w-full sm:w-auto justify-end">
                       <Link
                         to={`/property/${prop.slug || prop._id}`}
                         className="p-2 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 transition-colors"
