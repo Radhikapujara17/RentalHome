@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../api/client';
 import toast from 'react-hot-toast';
 import ImageUploader from './ImageUploader';
+import { trackEvent } from '../utils/analytics';
 import { ShieldCheck, X, FileText, CheckCircle2 } from 'lucide-react';
 
 const KycUploadModal = ({ isOpen, onClose, onVerifiedSuccess }) => {
@@ -38,6 +39,10 @@ const KycUploadModal = ({ isOpen, onClose, onVerifiedSuccess }) => {
       if (res.data.success) {
         setSubmitted(true);
         setVerifiedResult(res.data);
+        trackEvent('submit_kyc', {
+          document_type: docType,
+          auto_verified: Boolean(res.data.verified),
+        });
         if (res.data.verified) {
           toast.success(res.data.message, { duration: 5000 });
           if (onVerifiedSuccess) onVerifiedSuccess();

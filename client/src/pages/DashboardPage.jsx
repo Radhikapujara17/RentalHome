@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import api from '../api/client';
 import toast from 'react-hot-toast';
 import KycUploadModal from '../components/KycUploadModal';
+import Seo from '../components/Seo';
 import { 
   User, 
   Home, 
@@ -134,6 +135,7 @@ const DashboardPage = () => {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-10 space-y-8">
+      <Seo noIndex title="My Dashboard | RentNest" />
       
       {/* User Profile Banner */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">

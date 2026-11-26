@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Seo from '../components/Seo';
 import toast from 'react-hot-toast';
 import { 
   Home, 
@@ -187,6 +188,11 @@ const AuthPage = () => {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40">
+      <Seo
+        noIndex
+        title="Login or Sign Up | RentNest"
+        description="Sign in to RentNest to shortlist rental properties, schedule physical visits, and chat directly with verified owners."
+      />
       <div className="max-w-5xl w-full grid grid-cols-1 lg:grid-cols-12 bg-white rounded-3xl shadow-2xl border border-slate-200/80 overflow-hidden">
         
         {/* Left Branding Banner (Modern NYC Aesthetic) */}

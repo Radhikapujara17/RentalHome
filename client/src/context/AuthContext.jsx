@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../api/client';
 import toast from 'react-hot-toast';
+import { trackEvent } from '../utils/analytics';
 
 const AuthContext = createContext();
 
@@ -26,6 +27,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('rentnest_token', res.data.token);
         localStorage.setItem('rentnest_user', JSON.stringify(res.data.user));
         toast.success(`Logged in as ${res.data.user.name} (${role.toUpperCase()})`);
+        trackEvent('login', { method: 'demo', role });
         setIsAuthModalOpen(false);
       }
     } catch (err) {
@@ -47,6 +49,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('rentnest_token', res.data.token);
         localStorage.setItem('rentnest_user', JSON.stringify(res.data.user));
         toast.success(`Welcome to RentNest, ${res.data.user.name}!`);
+        trackEvent('login', { method: 'phone_otp', role: res.data.user.role || role || 'tenant' });
         setIsAuthModalOpen(false);
       }
     } catch (err) {
@@ -69,6 +72,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('rentnest_token', res.data.token);
         localStorage.setItem('rentnest_user', JSON.stringify(res.data.user));
         toast.success(`Welcome to RentNest, ${res.data.user.name}!`);
+        trackEvent('sign_up', { method: 'password', role: res.data.user.role || 'tenant' });
         setIsAuthModalOpen(false);
         return { success: true, user: res.data.user };
       }
@@ -93,6 +97,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('rentnest_token', res.data.token);
         localStorage.setItem('rentnest_user', JSON.stringify(res.data.user));
         toast.success(`Welcome back, ${res.data.user.name}!`);
+        trackEvent('login', { method: 'password', role: res.data.user.role || 'tenant' });
         setIsAuthModalOpen(false);
         return { success: true, user: res.data.user };
       }
@@ -114,6 +119,7 @@ export const AuthProvider = ({ children }) => {
         setUser(res.data.user);
         localStorage.setItem('rentnest_user', JSON.stringify(res.data.user));
         toast.success(`Account role switched to ${newRole.toUpperCase()}!`);
+        trackEvent('switch_role', { role: newRole });
         return { success: true, user: res.data.user };
       }
     } catch (err) {

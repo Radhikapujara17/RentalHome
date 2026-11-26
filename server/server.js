@@ -106,6 +106,9 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Mount SEO Routes (robots.txt & dynamic sitemap.xml)
+app.use('/', require('./routes/seoRoutes'));
+
 // Mount API Routes
 app.use('/api/v1/auth', require('./routes/authRoutes'));
 app.use('/api/v1/properties', require('./routes/propertyRoutes'));

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
+import Seo from '../components/Seo';
 import { 
   Users, 
   MapPin, 
@@ -48,6 +49,11 @@ const RoommatesPage = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+      <Seo
+        title="Flatmates & Shared Rooms in Rajkot & Gujarat | RentNest"
+        description="Find verified flatmates, single/shared PG rooms, and transparent co-living spaces near Saurashtra University, Kalawad Road, and major Gujarat hubs."
+        canonicalPath="/roommates"
+      />
       
       {/* Hero Header */}
       <div className="bg-gradient-to-r from-indigo-900 via-blue-900 to-slate-900 rounded-3xl p-8 sm:p-12 text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl relative overflow-hidden">

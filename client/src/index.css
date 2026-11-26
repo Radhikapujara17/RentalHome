@@ -33,3 +33,34 @@ body {
   margin: 0 !important;
   line-height: normal;
 }
+
+/* Print / Save-as-PDF single-page optimization */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    height: auto !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* When TO LET Poster modal is open, hide the entire app root so only the poster prints on 1 A4 page */
+  body.print-poster-active #root {
+    display: none !important;
+  }
+
+  .tolet-poster-portal {
+    position: static !important;
+    inset: auto !important;
+    display: block !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+}

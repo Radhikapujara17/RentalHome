@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import api from '../api/client';
 import toast from 'react-hot-toast';
+import Seo, { getSiteUrl } from '../components/Seo';
+import { trackEvent } from '../utils/analytics';
 import { FileText, Printer, Copy, Check, Shield } from 'lucide-react';
 
 const AgreementGeneratorPage = () => {
@@ -60,6 +62,7 @@ const AgreementGeneratorPage = () => {
       const res = await api.post('/tools/rental-agreement', formData);
       if (res.data.success) {
         setAgreementText(res.data.agreementText);
+        trackEvent('generate_rental_agreement', { meter_type: formData.meterType });
         toast.success('Gujarat 11-Month Agreement Drafted!');
       }
     } catch (err) {
@@ -76,11 +79,26 @@ const AgreementGeneratorPage = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const siteUrl = getSiteUrl();
   return (
     <div className="max-w-5xl mx-auto px-4 py-10 space-y-8">
+      <Seo
+        title="Gujarat 11-Month Rental Agreement Generator (Free Online Draft) | RentNest"
+        description="Draft a transparent 11-month residential rent agreement for Rajkot & Gujarat with deposit clauses, PGVCL electricity meter terms, and notice period protection."
+        canonicalPath="/tools/rental-agreement"
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'WebApplication',
+          name: 'RentNest Gujarat 11-Month Rental Agreement Drafter',
+          url: `${siteUrl}/tools/rental-agreement`,
+          applicationCategory: 'BusinessApplication',
+          operatingSystem: 'All',
+          offers: { '@type': 'Offer', price: '0', priceCurrency: 'INR' },
+        }}
+      />
       
       {/* Header */}
-      <div className="text-center space-y-2">
+      <div className="text-center space-y-2 print:hidden">
         <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-indigo-50 text-indigo-800 text-xs font-bold border border-indigo-200">
           <FileText className="w-3.5 h-3.5 text-indigo-600" />
           <span>Gujarat Tenancy Legal Framework</span>
@@ -93,10 +111,10 @@ const AgreementGeneratorPage = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 print:block">
         
         {/* Form (5 cols) */}
-        <div className="lg:col-span-5 bg-white p-6 rounded-3xl border border-slate-200 shadow-md space-y-4">
+        <div className="lg:col-span-5 bg-white p-6 rounded-3xl border border-slate-200 shadow-md space-y-4 print:hidden">
           <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider pb-2 border-b border-slate-100">
             Agreement Parties & Terms
           </h3>
@@ -221,16 +239,16 @@ const AgreementGeneratorPage = () => {
         </div>
 
         {/* Legal Text Preview (7 cols) */}
-        <div className="lg:col-span-7 space-y-4">
+        <div className="lg:col-span-7 space-y-4 print:w-full">
           
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-md space-y-4">
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-md space-y-4 print:border-0 print:shadow-none print:p-0">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center space-x-2">
                 <Shield className="w-5 h-5 text-indigo-600" />
                 <span className="text-sm font-black text-slate-800">11-Month Tenancy Agreement Draft</span>
               </div>
               {agreementText && (
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 print:hidden">
                   <button
                     onClick={handleCopy}
                     className="flex items-center space-x-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors"
@@ -239,7 +257,10 @@ const AgreementGeneratorPage = () => {
                     <span>{copied ? 'Copied' : 'Copy'}</span>
                   </button>
                   <button
-                    onClick={() => window.print()}
+                    onClick={() => {
+                      trackEvent('print_document', { document_type: 'rental_agreement' });
+                      window.print();
+                    }}
                     className="flex items-center space-x-1 px-3 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-xl hover:bg-slate-800 transition-colors"
                   >
                     <Printer className="w-3.5 h-3.5" />
@@ -278,7 +299,7 @@ const AgreementGeneratorPage = () => {
                   </div>
                 </div>
 
-                <pre className="p-4 rounded-2xl bg-slate-50 border border-slate-200 font-mono text-xs text-slate-800 whitespace-pre-wrap leading-relaxed max-h-[500px] overflow-y-auto">
+                <pre className="p-4 rounded-2xl bg-slate-50 border border-slate-200 font-mono text-xs text-slate-800 whitespace-pre-wrap leading-relaxed max-h-[500px] overflow-y-auto print:max-h-none print:overflow-visible print:text-[11px] print:leading-snug print:bg-white">
                   {agreementText}
                 </pre>
               </div>

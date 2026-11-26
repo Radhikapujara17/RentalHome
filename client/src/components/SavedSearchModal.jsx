@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/client';
 import toast from 'react-hot-toast';
+import { trackEvent } from '../utils/analytics';
 import { Bell, X, Phone, CheckCircle, MessageSquare } from 'lucide-react';
 
 const SavedSearchModal = ({ isOpen, onClose, filters }) => {
@@ -52,6 +53,12 @@ const SavedSearchModal = ({ isOpen, onClose, filters }) => {
       });
 
       if (res.data.success) {
+        trackEvent('create_saved_search', {
+          city: filters.city || 'All',
+          locality: filters.locality || 'all',
+          category: filters.category || 'residential',
+          bhk: filters.bhk || undefined,
+        });
         toast.success(res.data.message);
         onClose();
       }

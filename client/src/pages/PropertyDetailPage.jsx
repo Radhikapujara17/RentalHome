@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useCompare } from '../context/CompareContext';
 import { useWishlist } from '../context/WishlistContext';
 import ToLetPosterModal from '../components/ToLetPosterModal';
+import Seo, { getSiteUrl } from '../components/Seo';
+import { trackEvent } from '../utils/analytics';
 import toast from 'react-hot-toast';
 import {
   MapPin,
@@ -53,6 +55,7 @@ const PropertyDetailPage = () => {
 
   // Living Cost Calculator State
   const [estUnits, setEstUnits] = useState(150); // average units/mo
+  const lastTrackedViewRef = useRef(null);
 
   useEffect(() => {
     const fetchProperty = async () => {
@@ -60,7 +63,21 @@ const PropertyDetailPage = () => {
         setLoading(true);
         const res = await api.get(`/properties/${idOrSlug}`);
         if (res.data.success) {
-          setProperty(res.data.property);
+          const loaded = res.data.property;
+          setProperty(loaded);
+          if (lastTrackedViewRef.current !== loaded._id) {
+            lastTrackedViewRef.current = loaded._id;
+            trackEvent('view_item', {
+              currency: 'INR',
+              value: loaded.pricing?.monthlyRent,
+              property_id: loaded._id,
+              listing_number: loaded.listingNumber,
+              city: loaded.city || 'Rajkot',
+              locality: loaded.locality,
+              category: loaded.category,
+              zero_brokerage: loaded.pricing?.brokerageAmount === 0,
+            });
+          }
         }
       } catch (err) {
         toast.error('Could not load property details');
@@ -84,6 +101,7 @@ const PropertyDetailPage = () => {
   if (!property) {
     return (
       <div className="max-w-md mx-auto px-4 py-20 text-center space-y-4">
+        <Seo noIndex title="Property Not Found | RentNest" />
         <h2 className="text-xl font-bold text-slate-800">Property not found</h2>
         <Link to="/explore" className="text-sm font-bold text-blue-600 hover:underline">
           Return to Explore
@@ -172,6 +190,13 @@ const PropertyDetailPage = () => {
 
       if (res.data.success) {
         setVisitPass(res.data.visit);
+        trackEvent('book_visit', {
+          property_id: property._id,
+          listing_number: property.listingNumber,
+          city: property.city || 'Rajkot',
+          locality: property.locality,
+          time_slot: visitSlot,
+        });
         toast.success('Visit pass generated successfully!');
       }
     } catch (err) {
@@ -179,8 +204,62 @@ const PropertyDetailPage = () => {
     }
   };
 
+  const siteUrl = getSiteUrl();
+  const city = property.city || 'Rajkot';
+  const slugOrId = property.slug || property._id;
+  const canonicalPath = `/property/${slugOrId}`;
+  const monthlyRentFormatted = property.pricing?.monthlyRent?.toLocaleString('en-IN') || '0';
+  const propertyTypeLabel = isCommercial
+    ? getCommercialTypeLabel(property.commercialDetails?.commercialType || property.propertyType)
+    : property.bhk || 'Rental Home';
+  const brokerageText = property.pricing?.brokerageAmount === 0 ? 'Zero Brokerage' : 'Verified Listing';
+  const meterText = isDirectGovtMeter ? 'Direct PGVCL Meter' : 'Sub-Meter';
+  const seoTitle = `${property.title} in ${property.locality}, ${city} — ₹${monthlyRentFormatted}/mo | RentNest`;
+  const seoDescription = `${propertyTypeLabel} (${property.carpetAreaSqFt} sq.ft) for rent at ${property.societyName}, ${property.locality}, ${city} for ₹${monthlyRentFormatted}/month. ${brokerageText}, ${meterText}, transparent deposit & utilities.`;
+  const primaryImage = property.photos?.[0]?.url || '';
+  const propertyImages = (property.photos || []).map((p) => p.url).filter(Boolean);
+
+  const propertyJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'RealEstateListing',
+    name: property.title,
+    description: seoDescription,
+    url: `${siteUrl}${canonicalPath}`,
+    datePosted: property.createdAt,
+    ...(propertyImages.length > 0 ? { image: propertyImages } : {}),
+    offers: {
+      '@type': 'Offer',
+      price: property.pricing?.monthlyRent,
+      priceCurrency: 'INR',
+      availability: property.status === 'active' ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+    },
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: property.fullAddress || property.societyName,
+      addressLocality: property.locality,
+      addressRegion: 'Gujarat',
+      addressCountry: 'IN',
+    },
+    ...(property.coordinates?.lat && property.coordinates?.lng
+      ? {
+          geo: {
+            '@type': 'GeoCoordinates',
+            latitude: property.coordinates.lat,
+            longitude: property.coordinates.lng,
+          },
+        }
+      : {}),
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8 pb-28 lg:pb-8">
+      <Seo
+        title={seoTitle}
+        description={seoDescription}
+        canonicalPath={canonicalPath}
+        image={primaryImage}
+        jsonLd={propertyJsonLd}
+      />
       
       {/* Top Navigation & Actions */}
       <div className="flex flex-wrap items-center justify-between gap-2.5">
@@ -296,7 +375,7 @@ const PropertyDetailPage = () => {
                   activePhotoIdx === idx ? 'border-blue-600 ring-2 ring-blue-500/30' : 'border-transparent opacity-70 hover:opacity-100'
                 }`}
               >
-                <img src={photo.url} alt={`Photo ${idx}`} className="w-full h-full object-cover" />
+                <img src={photo.url} alt={`${property.title} - ${photo.roomTag || `Photo ${idx + 1}`}`} className="w-full h-full object-cover" />
                 <span className="absolute bottom-0 inset-x-0 bg-slate-900/80 text-white text-[9px] text-center font-semibold truncate px-1">
                   {photo.roomTag}
                 </span>
@@ -351,7 +430,7 @@ const PropertyDetailPage = () => {
 
             <div className="flex items-center space-x-2 text-slate-600 text-sm font-semibold">
               <MapPin className="w-4 h-4 text-blue-600 shrink-0" />
-              <span>{property.societyName}, {property.locality}, Rajkot</span>
+              <span>{property.societyName}, {property.locality}, {city}</span>
             </div>
             <p className="text-xs text-slate-500 font-normal">
               Full Address: {property.fullAddress} {property.landmark ? `(Landmark: ${property.landmark})` : ''}
@@ -656,6 +735,16 @@ const PropertyDetailPage = () => {
                 href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() =>
+                  trackEvent('contact_owner', {
+                    channel: 'whatsapp',
+                    source: 'property_detail',
+                    property_id: property._id,
+                    city: property.city || 'Rajkot',
+                    locality: property.locality,
+                    category: property.category,
+                  })
+                }
                 className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl text-xs font-bold flex items-center justify-center space-x-2 shadow-lg shadow-emerald-500/20 transition-transform active:scale-95"
               >
                 <MessageCircle className="w-4 h-4" />
@@ -670,6 +759,14 @@ const PropertyDetailPage = () => {
                     setIsAuthModalOpen(true);
                     return;
                   }
+                  trackEvent('contact_owner', {
+                    channel: 'in_app_chat',
+                    source: 'property_detail',
+                    property_id: property._id,
+                    city: property.city || 'Rajkot',
+                    locality: property.locality,
+                    category: property.category,
+                  });
                   setIsChatOpen(true);
                 }}
                 className="w-full py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-2xl text-xs font-bold flex items-center justify-center space-x-2 transition-all"

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import api from '../api/client';
 import toast from 'react-hot-toast';
+import Seo, { getSiteUrl } from '../components/Seo';
+import { trackEvent } from '../utils/analytics';
 import { Calculator, Printer, ShieldCheck, CheckCircle2, FileText, ArrowRight } from 'lucide-react';
 
 const HraCalculatorPage = () => {
@@ -40,6 +42,7 @@ const HraCalculatorPage = () => {
       const res = await api.post('/tools/hra-calculator', params);
       if (res.data.success) {
         setResult(res.data.data);
+        trackEvent('calculate_hra', { is_metro: params.isMetro });
         toast.success('HRA Tax Exemption Calculated!');
       }
     } catch (err) {
@@ -49,11 +52,26 @@ const HraCalculatorPage = () => {
     }
   };
 
+  const siteUrl = getSiteUrl();
   return (
     <div className="max-w-5xl mx-auto px-4 py-10 space-y-8">
+      <Seo
+        title="HRA Exemption Calculator & Rent Receipt Generator (Sec 10/13A) | RentNest"
+        description="Calculate House Rent Allowance (HRA) tax exemption under Section 10(13A) and generate printable monthly rent receipts with landlord PAN details."
+        canonicalPath="/tools/hra-calculator"
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'WebApplication',
+          name: 'RentNest HRA Tax Exemption Calculator',
+          url: `${siteUrl}/tools/hra-calculator`,
+          applicationCategory: 'FinanceApplication',
+          operatingSystem: 'All',
+          offers: { '@type': 'Offer', price: '0', priceCurrency: 'INR' },
+        }}
+      />
       
       {/* Title */}
-      <div className="text-center space-y-2">
+      <div className="text-center space-y-2 print:hidden">
         <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">
           <Calculator className="w-3.5 h-3.5 text-emerald-600" />
           <span>Section 10(13A) Income Tax Tool</span>
@@ -66,10 +84,10 @@ const HraCalculatorPage = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 print:block">
         
         {/* Input Form (5 cols) */}
-        <div className="lg:col-span-5 bg-white p-6 rounded-3xl border border-slate-200 shadow-md space-y-4">
+        <div className="lg:col-span-5 bg-white p-6 rounded-3xl border border-slate-200 shadow-md space-y-4 print:hidden">
           <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider pb-2 border-b border-slate-100">
             Income & Rent Details
           </h3>
@@ -175,7 +193,7 @@ const HraCalculatorPage = () => {
         </div>
 
         {/* Results & Receipt Preview (7 cols) */}
-        <div className="lg:col-span-7 space-y-6">
+        <div className="lg:col-span-7 space-y-6 print:w-full print:space-y-4">
           
           {result ? (
             <>
@@ -196,14 +214,17 @@ const HraCalculatorPage = () => {
               </div>
 
               {/* Sample Printable Rent Receipt */}
-              <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-md space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-md space-y-4 print:shadow-none print:border-0 print:p-0">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100 print:hidden">
                   <div className="flex items-center space-x-2">
                     <FileText className="w-5 h-5 text-blue-600" />
                     <span className="text-sm font-black text-slate-800">Rent Receipt Preview</span>
                   </div>
                   <button
-                    onClick={() => window.print()}
+                    onClick={() => {
+                      trackEvent('print_document', { document_type: 'hra_receipt' });
+                      window.print();
+                    }}
                     className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-xl hover:bg-slate-800 transition-colors"
                   >
                     <Printer className="w-3.5 h-3.5" />

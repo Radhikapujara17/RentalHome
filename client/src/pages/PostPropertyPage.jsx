@@ -3,6 +3,8 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import ImageUploader from '../components/ImageUploader';
+import Seo from '../components/Seo';
+import { trackEvent } from '../utils/analytics';
 import toast from 'react-hot-toast';
 import { 
   Building2, 
@@ -487,12 +489,26 @@ const PostPropertyPage = () => {
       if (isEdit) {
         const res = await api.put(`/properties/${id}`, payload);
         if (res.data.success) {
+          trackEvent('post_property', {
+            action: 'update',
+            category: formData.category,
+            city: formData.city || 'Rajkot',
+            locality: formData.locality,
+            zero_brokerage: Number(formData.pricing?.brokerageAmount || 0) === 0,
+          });
           toast.success(isCommercial ? 'Commercial listing updated successfully!' : 'Property listing updated successfully!');
           navigate(`/property/${res.data.property?.slug || id}`);
         }
       } else {
         const res = await api.post('/properties', payload);
         if (res.data.success) {
+          trackEvent('post_property', {
+            action: 'create',
+            category: formData.category,
+            city: formData.city || 'Rajkot',
+            locality: formData.locality,
+            zero_brokerage: Number(formData.pricing?.brokerageAmount || 0) === 0,
+          });
           toast.success(isCommercial ? 'Commercial listing published successfully!' : 'Property posted successfully on RentNest!');
           navigate(`/property/${res.data.property.slug || res.data.property._id}`);
         }
@@ -576,6 +592,7 @@ const PostPropertyPage = () => {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-10 space-y-8">
+      <Seo noIndex title={isEdit ? 'Edit Property Listing | RentNest' : 'Post Rental Property | RentNest'} />
       
       {/* Wizard Header */}
       <div className="text-center space-y-2">

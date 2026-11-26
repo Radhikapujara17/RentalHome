@@ -91,14 +91,32 @@ docker compose -f docker-compose.dev.yml up --build
    - Operations desk for Admin to inspect documents, approve badges, view live metrics, and moderate listings.
 7. **Direct Cloudinary Image Upload**: Drag-and-drop image uploader in the Post Property wizard and KYC modal uploading directly to Cloudinary CDN with fallback resilience.
 8. **Save Search & Instant WhatsApp Alerts**: Home seekers can subscribe to customized filter criteria and receive WhatsApp alerts when matching properties are listed.
-9. **Printable "TO LET" Gate Poster**: Auto-generates an A4 gate poster with dynamic QR code so street passers-by can scan and view virtual photos directly.
+9. **Printable "TO LET" Gate Poster**: Auto-generates a single-page A4 gate poster with dynamic QR code so street passers-by can scan and view virtual photos directly.
 10. **Side-by-Side Property Comparison Matrix**: Shortlist and compare up to 3 properties side-by-side.
 11. **Free Tenant SEO Tools**:
-    - **HRA Rent Receipt Generator** (Section 10(13A) compliance with 12 monthly printable receipts).
-    - **Gujarat 11-Month Rental Agreement Generator** (bilingual residential lease agreement ready for print or stamp paper).
+    - **HRA Rent Receipt Generator** (Section 10(13A) compliance with printable rent receipt layout).
+    - **Gujarat 11-Month Rental Agreement Generator** (residential lease agreement ready for print or stamp paper).
     - **Move-in Photo Inspection ("Deposit Shield")** (room-by-room condition logger to protect tenant security deposits from unfair deductions).
 12. **1-Click Demo Persona Switcher**: Instant switching between **Tenant**, **Direct Owner**, **Broker**, and **Admin** (with Dev OTP `123456`).
 13. **Progressive Web App (PWA)**: Web manifest and mobile standalone configuration ready for "Add to Home Screen".
+14. **SEO & Discoverability Architecture**:
+    - Crawlable public routes (`/`, `/explore`, `/roommates`, `/property/:idOrSlug`, `/tools/*`) with `noindex, nofollow` on auth/private dashboards.
+    - Dynamic per-page `<title>`, meta descriptions, canonical URLs (`VITE_SITE_URL`), Open Graph / Twitter Cards, and Schema.org JSON-LD (`Organization`, `WebSite`, `CollectionPage`/`ItemList`, `RealEstateListing`, `WebApplication`) via `client/src/components/Seo.jsx`.
+    - `robots.txt` and dynamic `/sitemap.xml` generated from active MongoDB property slugs (`server/controllers/seoController.js`, proxied in `client/nginx.conf`).
+15. **Google Analytics 4 (GA4) Page & Activity Tracking**:
+    - `gtag.js` (`G-LLWCM48NRV`) loaded in `client/index.html` with SPA route `page_view` tracking in `client/src/App.jsx` and central helper in `client/src/utils/analytics.js` (no PII sent).
+    - **Tracked Activity Events**:
+      - *Discovery*: `search`, `select_city`
+      - *Listing Engagement*: `view_item`, `add_to_wishlist`, `remove_from_wishlist`, `compare_property`, `print_tolet_poster`
+      - *Lead Conversions (recommended GA4 Key Events)*: `book_visit`, `contact_owner` (`whatsapp` / `in_app_chat`), `create_saved_search`
+      - *Tools*: `calculate_hra`, `generate_rental_agreement`, `save_move_in_checklist`, `print_document`
+      - *Auth & Supply*: `sign_up`, `login`, `switch_role`, `post_property`, `submit_kyc`
+
+---
+
+## 📊 Analytics & SEO Environment Notes
+- Set `VITE_SITE_URL` (client build) and `CLIENT_URL` (server `.env`) to your production domain so canonical tags, `robots.txt`, and `sitemap.xml` reflect your live URL.
+- View real-time and historical events in **Google Analytics → Reports → Realtime** and **Engagement → Events**, and mark `book_visit`, `contact_owner`, `sign_up`, and `post_property` as **Key Events**.
 
 ---
 
