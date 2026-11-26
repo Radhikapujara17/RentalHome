@@ -56,17 +56,9 @@ const Navbar = () => {
     }
   };
 
-  // Public vs Role-specific navigation menus
+  // Role-specific navigation menus (Only shown when logged in)
   const getNavItems = () => {
-    if (!isAuthenticated || !user) {
-      return [
-        { label: 'Home', to: '/', icon: Home },
-        { label: 'Explore Homes', to: '/explore', icon: Search },
-        { label: 'Commercial', to: '/explore?category=commercial', icon: Building2 },
-        { label: 'Flatmates', to: '/roommates', icon: Users },
-        { label: 'HRA Calculator', to: '/tools/hra-calculator', icon: Calculator },
-      ];
-    }
+    if (!isAuthenticated || !user) return [];
 
     switch (user.role) {
       case 'owner':
@@ -156,58 +148,51 @@ const Navbar = () => {
               </div>
             </Link>
 
-            {/* Navigation Links */}
-            <nav className="hidden lg:flex items-center space-x-1 ml-6 text-sm font-semibold text-slate-600" aria-label="Main navigation">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                const [itemPath, itemQuery] = item.to.split('?');
-                const isActive = itemQuery
-                  ? location.pathname === itemPath && location.search.includes(itemQuery)
-                  : location.pathname === itemPath && !(itemPath === '/explore' && location.search.includes('category=commercial'));
-                return (
-                  <Link
-                    key={item.to}
-                    to={item.to}
-                    className={`px-3 py-2 rounded-xl transition-all flex items-center space-x-1.5 ${
-                      isActive
-                        ? 'text-blue-600 bg-blue-50 font-bold shadow-xs'
-                        : 'hover:text-slate-900 hover:bg-slate-100'
-                    }`}
-                  >
-                    <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
-                    <span>{item.label}</span>
-                    {item.badge && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 font-extrabold uppercase">
-                        {item.badge}
-                      </span>
-                    )}
-                  </Link>
-                );
-              })}
-            </nav>
+            {/* Central Navigation Links: ONLY SHOWN WHEN LOGGED IN & FILTERED BY ROLE */}
+            {isAuthenticated && (
+              <nav className="hidden lg:flex items-center space-x-1 ml-6 text-sm font-semibold text-slate-600" aria-label="Main navigation">
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  const [itemPath, itemQuery] = item.to.split('?');
+                  const isActive = itemQuery
+                    ? location.pathname === itemPath && location.search.includes(itemQuery)
+                    : location.pathname === itemPath && !(itemPath === '/explore' && location.search.includes('category=commercial'));
+                  return (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      className={`px-3 py-2 rounded-xl transition-all flex items-center space-x-1.5 ${
+                        isActive
+                          ? 'text-blue-600 bg-blue-50 font-bold shadow-xs'
+                          : 'hover:text-slate-900 hover:bg-slate-100'
+                      }`}
+                    >
+                      <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
+                      <span>{item.label}</span>
+                      {item.badge && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 font-extrabold uppercase">
+                          {item.badge}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </nav>
+            )}
           </div>
 
           {/* Right Action Bar */}
           <div className="flex items-center space-x-2 sm:space-x-3">
             
-            {/* If NOT logged in: Login / Sign Up + Mobile menu toggle */}
+            {/* If NOT logged in: No menus, no chat, no post buttons. Only Login / Sign Up */}
             {!isAuthenticated ? (
-              <>
-                <Link
-                  to="/login"
-                  className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl shadow-md shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-95"
-                >
-                  <User className="w-4 h-4" />
-                  <span>Login / Sign Up</span>
-                </Link>
-                <button
-                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 lg:hidden"
-                  aria-label="Toggle navigation menu"
-                >
-                  {mobileMenuOpen ? <X className="w-5 h-5 text-slate-900" /> : <Menu className="w-5 h-5" />}
-                </button>
-              </>
+              <Link
+                to="/login"
+                className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl shadow-md shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-95"
+              >
+                <User className="w-4 h-4" />
+                <span>Login / Sign Up</span>
+              </Link>
             ) : (
               /* When Logged In: Role-Tailored Action CTAs & Profile */
               <>
@@ -310,20 +295,18 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Mobile Slide-Down Menu */}
-      {mobileMenuOpen && (
+      {/* Mobile Slide-Down Menu: ONLY SHOWN WHEN LOGGED IN */}
+      {isAuthenticated && mobileMenuOpen && (
         <div className="lg:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-5 space-y-2 shadow-lg animate-fade-in">
-          {isAuthenticated && (
-            <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
-              <div className="flex items-center space-x-2">
-                <span className="text-xs font-bold text-slate-700">{user?.name}</span>
-                <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded border ${getRoleBadgeColor(user?.role)}`}>
-                  {user?.role}
-                </span>
-              </div>
-              <span className="text-[10px] text-slate-400 font-semibold">{user?.phone}</span>
+          <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
+            <div className="flex items-center space-x-2">
+              <span className="text-xs font-bold text-slate-700">{user?.name}</span>
+              <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded border ${getRoleBadgeColor(user?.role)}`}>
+                {user?.role}
+              </span>
             </div>
-          )}
+            <span className="text-[10px] text-slate-400 font-semibold">{user?.phone}</span>
+          </div>
 
           <div className="space-y-1">
             {navItems.map((item) => {
@@ -355,7 +338,7 @@ const Navbar = () => {
             })}
           </div>
 
-          {isAuthenticated && (user?.role === 'owner' || user?.role === 'broker' || user?.role === 'admin') && (
+          {(user?.role === 'owner' || user?.role === 'broker' || user?.role === 'admin') && (
             <div className="pt-2">
               <Link
                 to="/post-property"
@@ -368,32 +351,19 @@ const Navbar = () => {
             </div>
           )}
 
-          {isAuthenticated ? (
-            <div className="pt-2 border-t border-slate-100">
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  logout();
-                  navigate('/login');
-                }}
-                className="w-full flex items-center justify-center space-x-2 text-rose-600 bg-rose-50 hover:bg-rose-100 font-bold text-xs py-2 rounded-xl transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-                <span>Log Out</span>
-              </button>
-            </div>
-          ) : (
-            <div className="pt-2 border-t border-slate-100">
-              <Link
-                to="/login"
-                onClick={() => setMobileMenuOpen(false)}
-                className="w-full flex items-center justify-center space-x-2 bg-blue-600 text-white font-bold text-xs py-2.5 rounded-xl shadow-sm"
-              >
-                <User className="w-4 h-4" />
-                <span>Login / Sign Up</span>
-              </Link>
-            </div>
-          )}
+          <div className="pt-2 border-t border-slate-100">
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                logout();
+                navigate('/login');
+              }}
+              className="w-full flex items-center justify-center space-x-2 text-rose-600 bg-rose-50 hover:bg-rose-100 font-bold text-xs py-2 rounded-xl transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Log Out</span>
+            </button>
+          </div>
         </div>
       )}
     </header>
