@@ -21,6 +21,20 @@ const HraCalculatorPage = () => {
 
   const handleCalculate = async (e) => {
     e.preventDefault();
+
+    if (!params.basicSalary || Number(params.basicSalary) <= 0) {
+      toast.error('Monthly basic salary must be greater than ₹0');
+      return;
+    }
+    if (params.hraReceived === undefined || Number(params.hraReceived) < 0) {
+      toast.error('Monthly HRA received cannot be negative');
+      return;
+    }
+    if (!params.rentPaid || Number(params.rentPaid) <= 0) {
+      toast.error('Actual monthly rent paid must be greater than ₹0');
+      return;
+    }
+
     try {
       setLoading(true);
       const res = await api.post('/tools/hra-calculator', params);
@@ -29,7 +43,7 @@ const HraCalculatorPage = () => {
         toast.success('HRA Tax Exemption Calculated!');
       }
     } catch (err) {
-      toast.error('Calculation failed');
+      toast.error(err.response?.data?.message || 'Calculation failed');
     } finally {
       setLoading(false);
     }
@@ -65,6 +79,8 @@ const HraCalculatorPage = () => {
               <label className="block text-slate-700 mb-1">Monthly Basic Salary + DA (₹)</label>
               <input
                 type="number"
+                required
+                min="100"
                 value={params.basicSalary}
                 onChange={(e) => setParams({ ...params, basicSalary: Number(e.target.value) })}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 outline-none focus:border-blue-600 font-bold"
@@ -75,6 +91,8 @@ const HraCalculatorPage = () => {
               <label className="block text-slate-700 mb-1">Monthly HRA Received from Employer (₹)</label>
               <input
                 type="number"
+                required
+                min="0"
                 value={params.hraReceived}
                 onChange={(e) => setParams({ ...params, hraReceived: Number(e.target.value) })}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 outline-none focus:border-blue-600 font-bold"
@@ -85,6 +103,8 @@ const HraCalculatorPage = () => {
               <label className="block text-slate-700 mb-1">Actual Monthly Rent Paid (₹)</label>
               <input
                 type="number"
+                required
+                min="100"
                 value={params.rentPaid}
                 onChange={(e) => setParams({ ...params, rentPaid: Number(e.target.value) })}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 outline-none focus:border-blue-600 font-bold text-blue-600"

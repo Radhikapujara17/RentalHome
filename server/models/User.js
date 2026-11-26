@@ -3,9 +3,36 @@ const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
-  phone: { type: String, required: true, unique: true, index: true },
+  phone: { 
+    type: String, 
+    required: [true, 'Phone number is required'], 
+    unique: true, 
+    index: true,
+    trim: true,
+    validate: {
+      validator: function(v) {
+        if (!v) return false;
+        // Standardize clean format: +91XXXXXXXXXX or 10-digit mobile starting with 6-9
+        const clean = v.replace(/[\s\-\(\)\.]/g, '');
+        return /^(\+91)?[6-9]\d{9}$/.test(clean);
+      },
+      message: props => `${props.value} is not a valid 10-digit mobile number.`
+    }
+  },
   email: { type: String, trim: true, lowercase: true, sparse: true },
-  password: { type: String, select: false },
+  password: { 
+    type: String, 
+    select: false,
+    validate: {
+      validator: function(v) {
+        if (!v) return true; // password is not strictly required if using OTP-only login
+        // If already hashed with bcrypt, skip validation
+        if (/^\$2[aby]\$\d+\$/.test(v)) return true;
+        return v.length >= 6 && /[a-zA-Z]/.test(v) && /[0-9]/.test(v);
+      },
+      message: 'Password must be at least 6 characters long and contain both letters and numbers.'
+    }
+  },
   role: { 
     type: String, 
     enum: ['tenant', 'owner', 'broker', 'admin'], 

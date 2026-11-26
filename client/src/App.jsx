@@ -46,11 +46,12 @@ function AppContent() {
 
       <main className="flex-grow">
         <Routes>
-          {/* Default Route: Show Login by default when not logged in */}
+          {/* Default Route: Show Login by default when not logged in, Explore Properties when logged in */}
           <Route 
             path="/" 
-            element={!isAuthenticated ? <Navigate to="/login" replace /> : <HomePage />} 
+            element={!isAuthenticated ? <Navigate to="/login" replace /> : <Navigate to="/explore" replace />} 
           />
+          <Route path="/home" element={!isAuthenticated ? <Navigate to="/login" replace /> : <HomePage />} />
           <Route path="/login" element={<AuthPage />} />
           <Route path="/register" element={<AuthPage />} />
 

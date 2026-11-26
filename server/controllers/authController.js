@@ -1,6 +1,10 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
-const { verifyNameMatch } = require('../utils/helpers');
+const { 
+  verifyNameMatch, 
+  normalizeAndValidatePhone, 
+  validatePassword 
+} = require('../utils/helpers');
 
 // Helper to generate JWT token
 const generateToken = (id) => {
@@ -16,28 +20,42 @@ exports.register = async (req, res, next) => {
   try {
     const { name, phone, email, password, role = 'tenant', city = 'Rajkot', agencyName } = req.body;
 
-    if (!name || !phone || !password) {
-      return res.status(400).json({ success: false, message: 'Please provide your full name, phone number, and password' });
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, message: 'Please provide your full name.' });
     }
 
-    // Check if user already exists with this phone
-    let existingPhone = await User.findOne({ phone });
+    // Phone validation
+    const phoneCheck = normalizeAndValidatePhone(phone);
+    if (!phoneCheck.isValid) {
+      return res.status(400).json({ success: false, message: phoneCheck.error });
+    }
+
+    // Password validation
+    const passwordCheck = validatePassword(password);
+    if (!passwordCheck.isValid) {
+      return res.status(400).json({ success: false, message: passwordCheck.error });
+    }
+
+    // Check if user already exists with this phone (formatted or raw)
+    let existingPhone = await User.findOne({ 
+      phone: { $in: [phoneCheck.formattedPhone, phoneCheck.raw10, phone.trim()] } 
+    });
     if (existingPhone) {
       return res.status(400).json({ success: false, message: 'An account with this phone number already exists. Please log in.' });
     }
 
     // Check if email already exists
     if (email) {
-      const existingEmail = await User.findOne({ email });
+      const existingEmail = await User.findOne({ email: email.trim().toLowerCase() });
       if (existingEmail) {
         return res.status(400).json({ success: false, message: 'An account with this email address already exists.' });
       }
     }
 
-    // Prepare user object
+    // Prepare user object with normalized phone
     const userData = {
       name: name.trim(),
-      phone: phone.trim(),
+      phone: phoneCheck.formattedPhone,
       email: email ? email.trim().toLowerCase() : undefined,
       password,
       role: ['tenant', 'owner', 'broker'].includes(role) ? role : 'tenant',
@@ -85,17 +103,30 @@ exports.login = async (req, res, next) => {
   try {
     const { identifier, password } = req.body;
 
-    if (!identifier || !password) {
-      return res.status(400).json({ success: false, message: 'Please enter your phone/email and password' });
+    if (!identifier || !identifier.trim() || !password) {
+      return res.status(400).json({ success: false, message: 'Please enter your phone/email and password.' });
     }
 
-    // Search by phone or email
-    const user = await User.findOne({
-      $or: [
-        { phone: identifier.trim() }, 
-        { email: identifier.trim().toLowerCase() }
-      ]
-    }).select('+password');
+    const cleanIdentifier = identifier.trim();
+
+    // Check if password has minimum length
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters long.' });
+    }
+
+    // Search conditions for identifier
+    const phoneCheck = normalizeAndValidatePhone(cleanIdentifier);
+    const orConditions = [
+      { email: cleanIdentifier.toLowerCase() },
+      { phone: cleanIdentifier }
+    ];
+
+    if (phoneCheck.isValid) {
+      orConditions.push({ phone: phoneCheck.formattedPhone });
+      orConditions.push({ phone: phoneCheck.raw10 });
+    }
+
+    const user = await User.findOne({ $or: orConditions }).select('+password');
 
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid credentials. Account not found.' });
@@ -141,22 +172,32 @@ exports.sendOtp = async (req, res, next) => {
   try {
     const { phone } = req.body;
     if (!phone) {
-      return res.status(400).json({ success: false, message: 'Please provide a valid phone number' });
+      return res.status(400).json({ success: false, message: 'Please provide a valid phone number.' });
     }
 
+    const phoneCheck = normalizeAndValidatePhone(phone);
+    if (!phoneCheck.isValid) {
+      return res.status(400).json({ success: false, message: phoneCheck.error });
+    }
+
+    const standardPhone = phoneCheck.formattedPhone;
     const otp = process.env.USE_DEV_OTP === 'true' ? '123456' : Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
-    let user = await User.findOne({ phone });
+    let user = await User.findOne({
+      phone: { $in: [standardPhone, phoneCheck.raw10, phone.trim()] }
+    });
+
     if (!user) {
       // Create user placeholder
       user = new User({
-        name: `User ${phone.slice(-4)}`,
-        phone,
+        name: `User ${phoneCheck.raw10.slice(-4)}`,
+        phone: standardPhone,
         otpCode: otp,
         otpExpiresAt: otpExpires
       });
     } else {
+      user.phone = standardPhone; // ensure standardized
       user.otpCode = otp;
       user.otpExpiresAt = otpExpires;
     }
@@ -164,7 +205,7 @@ exports.sendOtp = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: `OTP sent successfully to ${phone}`,
+      message: `OTP sent successfully to ${standardPhone}`,
       devOtp: process.env.USE_DEV_OTP === 'true' ? otp : undefined
     });
   } catch (error) {
@@ -180,10 +221,16 @@ exports.verifyOtp = async (req, res, next) => {
     const { phone, otp, role, name } = req.body;
 
     if (!phone || !otp) {
-      return res.status(400).json({ success: false, message: 'Phone and OTP are required' });
+      return res.status(400).json({ success: false, message: 'Phone and OTP are required.' });
     }
 
-    const user = await User.findOne({ phone });
+    const phoneCheck = normalizeAndValidatePhone(phone);
+    const standardPhone = phoneCheck.isValid ? phoneCheck.formattedPhone : phone.trim();
+
+    const user = await User.findOne({
+      phone: { $in: [standardPhone, phoneCheck.raw10, phone.trim()] }
+    });
+
     if (!user) {
       return res.status(400).json({ success: false, message: 'User not found. Request an OTP first.' });
     }
@@ -193,7 +240,7 @@ exports.verifyOtp = async (req, res, next) => {
     const isOtpValid = (user.otpCode === otp && user.otpExpiresAt > Date.now()) || isDevMatch;
 
     if (!isOtpValid) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired OTP code' });
+      return res.status(400).json({ success: false, message: 'Invalid or expired OTP code.' });
     }
 
     // Update details
@@ -305,16 +352,53 @@ exports.getMe = async (req, res, next) => {
   }
 };
 
-// @desc    Update Profile & Contact Preference
+// @desc    Update Profile & Contact Preference / Role
 // @route   PUT /api/v1/auth/profile
 // @access  Private
 exports.updateProfile = async (req, res, next) => {
   try {
-    const { name, email, avatar, contactPreference, brokerDetails } = req.body;
+    const { name, email, avatar, contactPreference, brokerDetails, role, phone, password } = req.body;
     const user = await User.findById(req.user.id);
 
-    if (name) user.name = name;
-    if (email) user.email = email;
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (role && ['tenant', 'owner', 'broker'].includes(role)) {
+      user.role = role;
+    }
+
+    if (name !== undefined) {
+      if (!name || !name.trim() || name.trim().length < 2) {
+        return res.status(400).json({ success: false, message: 'Full name must be at least 2 characters long' });
+      }
+      user.name = name.trim();
+    }
+
+    if (phone) {
+      const phoneCheck = normalizeAndValidatePhone(phone);
+      if (!phoneCheck.isValid) {
+        return res.status(400).json({ success: false, message: phoneCheck.error });
+      }
+      user.phone = phoneCheck.formattedPhone;
+    }
+
+    if (email !== undefined && email !== '') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim().toLowerCase())) {
+        return res.status(400).json({ success: false, message: 'Please provide a valid email address' });
+      }
+      user.email = email.trim().toLowerCase();
+    }
+
+    if (password) {
+      const passwordCheck = validatePassword(password);
+      if (!passwordCheck.isValid) {
+        return res.status(400).json({ success: false, message: passwordCheck.error });
+      }
+      user.password = password;
+    }
+
     if (avatar) user.avatar = avatar;
     if (contactPreference) user.contactPreference = contactPreference;
     if (brokerDetails && user.role === 'broker') {
@@ -325,7 +409,20 @@ exports.updateProfile = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      user
+      message: 'Profile updated successfully',
+      user: {
+        _id: user._id,
+        id: user._id,
+        name: user.name,
+        phone: user.phone,
+        email: user.email,
+        role: user.role,
+        avatar: user.avatar,
+        verificationStatus: user.verificationStatus,
+        contactPreference: user.contactPreference,
+        brokerDetails: user.brokerDetails,
+        city: user.city || 'Rajkot'
+      }
     });
   } catch (error) {
     next(error);
@@ -338,8 +435,11 @@ exports.updateProfile = async (req, res, next) => {
 exports.submitKyc = async (req, res, next) => {
   try {
     const { kycDocumentUrl, kycDocumentType = 'electricity_bill', consumerName } = req.body;
-    if (!kycDocumentUrl) {
+    if (!kycDocumentUrl || !kycDocumentUrl.trim()) {
       return res.status(400).json({ success: false, message: 'Please provide document URL / photo' });
+    }
+    if (consumerName && consumerName.trim().length < 2) {
+      return res.status(400).json({ success: false, message: 'Consumer name must be at least 2 characters long' });
     }
 
     const user = await User.findById(req.user.id);

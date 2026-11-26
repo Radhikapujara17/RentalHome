@@ -80,14 +80,18 @@ exports.sendMessage = async (req, res, next) => {
   try {
     const { conversationId, text } = req.body;
 
-    if (!text || !conversationId) {
-      return res.status(400).json({ success: false, message: 'Message text and conversationId required' });
+    if (!text || !text.trim() || !conversationId) {
+      return res.status(400).json({ success: false, message: 'Message text and conversationId are required' });
+    }
+
+    if (text.trim().length > 1000) {
+      return res.status(400).json({ success: false, message: 'Message cannot exceed 1000 characters' });
     }
 
     const message = await Message.create({
       conversation: conversationId,
       sender: req.user.id,
-      text
+      text: text.trim()
     });
 
     // Update conversation lastMessage

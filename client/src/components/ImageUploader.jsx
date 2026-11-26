@@ -17,6 +17,11 @@ const ImageUploader = ({ onUploadSuccess, label = "Upload Property Photo" }) => 
       return;
     }
 
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Image file size cannot exceed 10MB');
+      return;
+    }
+
     // Set local preview
     const reader = new FileReader();
     reader.onload = () => setPreview(reader.result);

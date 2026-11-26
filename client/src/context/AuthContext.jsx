@@ -20,6 +20,7 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       const res = await api.post('/auth/demo-login', { role });
       if (res.data.success) {
+        localStorage.removeItem('rentnest_wishlist_ids');
         setUser(res.data.user);
         setToken(res.data.token);
         localStorage.setItem('rentnest_token', res.data.token);
@@ -40,6 +41,7 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       const res = await api.post('/auth/verify-otp', { phone, otp, role, name });
       if (res.data.success) {
+        localStorage.removeItem('rentnest_wishlist_ids');
         setUser(res.data.user);
         setToken(res.data.token);
         localStorage.setItem('rentnest_token', res.data.token);
@@ -61,6 +63,7 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       const res = await api.post('/auth/register', formData);
       if (res.data.success) {
+        localStorage.removeItem('rentnest_wishlist_ids');
         setUser(res.data.user);
         setToken(res.data.token);
         localStorage.setItem('rentnest_token', res.data.token);
@@ -84,6 +87,7 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       const res = await api.post('/auth/login', { identifier, password });
       if (res.data.success) {
+        localStorage.removeItem('rentnest_wishlist_ids');
         setUser(res.data.user);
         setToken(res.data.token);
         localStorage.setItem('rentnest_token', res.data.token);
@@ -101,11 +105,32 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Switch / Update Account Role for logged-in user
+  const updateUserRole = async (newRole) => {
+    try {
+      setLoading(true);
+      const res = await api.put('/auth/profile', { role: newRole });
+      if (res.data.success && res.data.user) {
+        setUser(res.data.user);
+        localStorage.setItem('rentnest_user', JSON.stringify(res.data.user));
+        toast.success(`Account role switched to ${newRole.toUpperCase()}!`);
+        return { success: true, user: res.data.user };
+      }
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to update role';
+      toast.error(msg);
+      return { success: false, message: msg };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = () => {
     setUser(null);
     setToken(null);
     localStorage.removeItem('rentnest_token');
     localStorage.removeItem('rentnest_user');
+    localStorage.removeItem('rentnest_wishlist_ids');
     toast.success('Logged out successfully');
   };
 
@@ -120,6 +145,7 @@ export const AuthProvider = ({ children }) => {
         login,
         demoLogin,
         verifyOtp,
+        updateUserRole,
         logout,
         isAuthModalOpen,
         setIsAuthModalOpen,

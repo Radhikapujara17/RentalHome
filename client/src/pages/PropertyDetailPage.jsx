@@ -137,12 +137,37 @@ const PropertyDetailPage = () => {
       return;
     }
 
+    const ownerId = property.owner?._id || property.owner;
+    const currentUserId = user?._id || user?.id;
+    if (user && ownerId && currentUserId && currentUserId.toString() === ownerId.toString()) {
+      toast.error('You are the owner of this listing and cannot book a visit for your own property.');
+      return;
+    }
+
+    if (!visitDate) {
+      toast.error('Please choose a preferred visit date');
+      return;
+    }
+
+    const pDate = new Date(visitDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (isNaN(pDate.getTime()) || pDate < today) {
+      toast.error('Preferred visit date cannot be in the past');
+      return;
+    }
+
+    if (visitNote && visitNote.trim().length > 500) {
+      toast.error('Note cannot exceed 500 characters');
+      return;
+    }
+
     try {
       const res = await api.post('/visits', {
         propertyId: property._id,
-        preferredDate: visitDate || new Date(Date.now() + 24 * 60 * 60 * 1000),
+        preferredDate: visitDate,
         timeSlot: visitSlot,
-        tenantNote: visitNote,
+        tenantNote: visitNote.trim(),
       });
 
       if (res.data.success) {
@@ -756,6 +781,7 @@ const PropertyDetailPage = () => {
                   <input
                     type="date"
                     required
+                    min={new Date().toISOString().split('T')[0]}
                     value={visitDate}
                     onChange={(e) => setVisitDate(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:border-blue-600"

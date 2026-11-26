@@ -29,6 +29,32 @@ const AgreementGeneratorPage = () => {
 
   const handleGenerate = async (e) => {
     e.preventDefault();
+
+    if (!formData.landlordName || formData.landlordName.trim().length < 2) {
+      toast.error('Please enter the Landlord / Owner full name (min 2 characters)');
+      return;
+    }
+    if (!formData.tenantName || formData.tenantName.trim().length < 2) {
+      toast.error('Please enter the Tenant full name (min 2 characters)');
+      return;
+    }
+    if (!formData.propertyAddress || formData.propertyAddress.trim().length < 8) {
+      toast.error('Please provide the full rented property address (min 8 characters)');
+      return;
+    }
+    if (!formData.monthlyRent || Number(formData.monthlyRent) <= 0) {
+      toast.error('Monthly rent must be greater than ₹0');
+      return;
+    }
+    if (formData.securityDeposit === undefined || Number(formData.securityDeposit) < 0) {
+      toast.error('Security deposit cannot be negative');
+      return;
+    }
+    if (!formData.startDate) {
+      toast.error('Please choose agreement commencement date');
+      return;
+    }
+
     try {
       setLoading(true);
       const res = await api.post('/tools/rental-agreement', formData);
@@ -37,7 +63,7 @@ const AgreementGeneratorPage = () => {
         toast.success('Gujarat 11-Month Agreement Drafted!');
       }
     } catch (err) {
-      toast.error('Failed to generate agreement');
+      toast.error(err.response?.data?.message || 'Failed to generate agreement');
     } finally {
       setLoading(false);
     }
@@ -80,6 +106,8 @@ const AgreementGeneratorPage = () => {
               <label className="block text-slate-700 mb-1">Landlord / Owner Name</label>
               <input
                 type="text"
+                required
+                minLength={2}
                 value={formData.landlordName}
                 onChange={(e) => setFormData({ ...formData, landlordName: e.target.value })}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 outline-none focus:border-blue-600 font-bold"
@@ -90,6 +118,8 @@ const AgreementGeneratorPage = () => {
               <label className="block text-slate-700 mb-1">Tenant Full Name</label>
               <input
                 type="text"
+                required
+                minLength={2}
                 value={formData.tenantName}
                 onChange={(e) => setFormData({ ...formData, tenantName: e.target.value })}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 outline-none focus:border-blue-600 font-bold"
@@ -100,6 +130,8 @@ const AgreementGeneratorPage = () => {
               <label className="block text-slate-700 mb-1">Rented Property Full Address</label>
               <textarea
                 rows={2}
+                required
+                minLength={8}
                 value={formData.propertyAddress}
                 onChange={(e) => setFormData({ ...formData, propertyAddress: e.target.value })}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 outline-none focus:border-blue-600 resize-none"
@@ -111,6 +143,8 @@ const AgreementGeneratorPage = () => {
                 <label className="block text-slate-700 mb-1">Monthly Rent (₹)</label>
                 <input
                   type="number"
+                  required
+                  min="100"
                   value={formData.monthlyRent}
                   onChange={(e) => setFormData({ ...formData, monthlyRent: Number(e.target.value) })}
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 outline-none focus:border-blue-600 font-bold text-blue-600"
@@ -121,6 +155,7 @@ const AgreementGeneratorPage = () => {
                 <label className="block text-slate-700 mb-1">Security Deposit (₹)</label>
                 <input
                   type="number"
+                  min="0"
                   value={formData.securityDeposit}
                   onChange={(e) => setFormData({ ...formData, securityDeposit: Number(e.target.value) })}
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 outline-none focus:border-blue-600 font-bold"
@@ -133,6 +168,7 @@ const AgreementGeneratorPage = () => {
                 <label className="block text-slate-700 mb-1">Lock-in Period (Months)</label>
                 <input
                   type="number"
+                  min="0"
                   value={formData.lockInPeriodMonths}
                   onChange={(e) => setFormData({ ...formData, lockInPeriodMonths: Number(e.target.value) })}
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 outline-none focus:border-blue-600"
@@ -143,6 +179,7 @@ const AgreementGeneratorPage = () => {
                 <label className="block text-slate-700 mb-1">Notice Period (Days)</label>
                 <input
                   type="number"
+                  min="0"
                   value={formData.noticePeriodDays}
                   onChange={(e) => setFormData({ ...formData, noticePeriodDays: Number(e.target.value) })}
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 outline-none focus:border-blue-600"

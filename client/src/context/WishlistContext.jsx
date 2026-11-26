@@ -38,12 +38,15 @@ export const WishlistProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && user) {
+      setWishlist([]);
+      setSavedIds([]);
       fetchWishlist();
     } else {
       setWishlist([]);
+      setSavedIds([]);
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user?._id]);
 
   const isSaved = (propertyId) => {
     if (!propertyId) return false;

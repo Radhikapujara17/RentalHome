@@ -18,6 +18,10 @@ const KycUploadModal = ({ isOpen, onClose, onVerifiedSuccess }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!consumerName || consumerName.trim().length < 2) {
+      toast.error('Please enter the owner / consumer name printed on the document (at least 2 characters)');
+      return;
+    }
     if (!documentUrl) {
       toast.error('Please upload an electricity bill or tax document first');
       return;
@@ -28,7 +32,7 @@ const KycUploadModal = ({ isOpen, onClose, onVerifiedSuccess }) => {
       const res = await api.post('/auth/kyc/submit', {
         kycDocumentUrl: documentUrl,
         kycDocumentType: docType,
-        consumerName: consumerName || user?.name
+        consumerName: consumerName.trim()
       });
 
       if (res.data.success) {

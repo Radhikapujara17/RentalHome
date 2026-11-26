@@ -56,6 +56,19 @@ const MoveInChecklistPage = () => {
   };
 
   const handleSave = () => {
+    if (!propertyTitle || !propertyTitle.trim()) {
+      toast.error('Please specify the rented premises or property name');
+      return;
+    }
+    if (!tenantName || !tenantName.trim()) {
+      toast.error('Please specify the tenant name');
+      return;
+    }
+    if (!ownerName || !ownerName.trim()) {
+      toast.error('Please specify the landlord name');
+      return;
+    }
+
     setSaved(true);
     toast.success('Move-in Condition Checklist digitally verified & saved!');
   };
