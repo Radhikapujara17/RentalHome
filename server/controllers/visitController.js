@@ -8,6 +8,19 @@ exports.createVisitRequest = async (req, res, next) => {
   try {
     const { propertyId, preferredDate, timeSlot, tenantNote } = req.body;
 
+    if (!propertyId) {
+      return res.status(400).json({ success: false, message: 'Property ID is required.' });
+    }
+
+    if (preferredDate) {
+      const pDate = new Date(preferredDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (isNaN(pDate.getTime()) || pDate < today) {
+        return res.status(400).json({ success: false, message: 'Preferred visit date cannot be in the past.' });
+      }
+    }
+
     const property = await Property.findById(propertyId);
     if (!property) {
       return res.status(404).json({ success: false, message: 'Property not found' });

@@ -1,9 +1,10 @@
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect, useRef } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CompareProvider } from './context/CompareContext';
 import { WishlistProvider } from './context/WishlistContext';
+import { trackPageView } from './utils/analytics';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import AuthModal from './components/AuthModal';
@@ -25,6 +26,17 @@ import AuthPage from './pages/AuthPage';
 
 function AppContent() {
   const { isChatOpen, setIsChatOpen, isAuthenticated } = useAuth();
+  const location = useLocation();
+  const lastTrackedPathRef = useRef(`${window.location.pathname}${window.location.search}`);
+
+  useEffect(() => {
+    const currentPath = `${location.pathname}${location.search}`;
+    if (lastTrackedPathRef.current === currentPath) {
+      return;
+    }
+    lastTrackedPathRef.current = currentPath;
+    trackPageView(currentPath);
+  }, [location.pathname, location.search]);
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800">
@@ -46,32 +58,30 @@ function AppContent() {
 
       <main className="flex-grow">
         <Routes>
-          {/* Default Route: Show Login by default when not logged in */}
-          <Route 
-            path="/" 
-            element={!isAuthenticated ? <Navigate to="/login" replace /> : <HomePage />} 
-          />
+          {/* Publicly Crawlable Routes */}
+          <Route path="/" element={<HomePage />} />
+          <Route path="/home" element={<HomePage />} />
+          <Route path="/explore" element={<ExplorePage />} />
+          <Route path="/roommates" element={<RoommatesPage />} />
+          <Route path="/property/:idOrSlug" element={<PropertyDetailPage />} />
+          <Route path="/tools/hra-calculator" element={<HraCalculatorPage />} />
+          <Route path="/tools/rental-agreement" element={<AgreementGeneratorPage />} />
+          <Route path="/tools/move-in-checklist" element={<MoveInChecklistPage />} />
           <Route path="/login" element={<AuthPage />} />
           <Route path="/register" element={<AuthPage />} />
 
           {/* Protected Application Routes: Require Login, otherwise redirect to /login */}
-          <Route path="/explore" element={!isAuthenticated ? <Navigate to="/login" replace /> : <ExplorePage />} />
-          <Route path="/roommates" element={!isAuthenticated ? <Navigate to="/login" replace /> : <RoommatesPage />} />
-          <Route path="/property/:idOrSlug" element={!isAuthenticated ? <Navigate to="/login" replace /> : <PropertyDetailPage />} />
           <Route path="/post-property" element={!isAuthenticated ? <Navigate to="/login" replace /> : <PostPropertyPage />} />
           <Route path="/edit-property/:id" element={!isAuthenticated ? <Navigate to="/login" replace /> : <PostPropertyPage />} />
-          <Route path="/tools/hra-calculator" element={!isAuthenticated ? <Navigate to="/login" replace /> : <HraCalculatorPage />} />
-          <Route path="/tools/rental-agreement" element={!isAuthenticated ? <Navigate to="/login" replace /> : <AgreementGeneratorPage />} />
-          <Route path="/tools/move-in-checklist" element={!isAuthenticated ? <Navigate to="/login" replace /> : <MoveInChecklistPage />} />
           <Route path="/dashboard" element={!isAuthenticated ? <Navigate to="/login" replace /> : <DashboardPage />} />
           <Route path="/admin" element={!isAuthenticated ? <Navigate to="/login" replace /> : <AdminDashboardPage />} />
 
           {/* Fallback unknown route */}
-          <Route path="*" element={<Navigate to={!isAuthenticated ? "/login" : "/"} replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
 
-      {isAuthenticated && <Footer />}
+      <Footer />
       <AuthModal />
       <CompareModal />
       <ChatDrawer isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />

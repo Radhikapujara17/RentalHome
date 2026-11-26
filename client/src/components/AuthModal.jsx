@@ -6,7 +6,7 @@ import { X, Phone, KeyRound, Shield, UserCheck, Home, Briefcase, Lock } from 'lu
 
 const AuthModal = () => {
   const { isAuthModalOpen, setIsAuthModalOpen, demoLogin, verifyOtp, loading } = useAuth();
-  const [phone, setPhone] = useState('+919876543201');
+  const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState('phone'); // 'phone' | 'otp'
   const [otpSentHint, setOtpSentHint] = useState('');
@@ -15,10 +15,23 @@ const AuthModal = () => {
 
   if (!isAuthModalOpen) return null;
 
+  const validatePhone = (raw) => {
+    if (!raw) return false;
+    const cleaned = raw.replace(/[\s\-\(\)\.]/g, '');
+    const digits = cleaned.startsWith('+91')
+      ? cleaned.slice(3)
+      : (cleaned.startsWith('91') && cleaned.length === 12)
+        ? cleaned.slice(2)
+        : (cleaned.startsWith('0') && cleaned.length === 11)
+          ? cleaned.slice(1)
+          : cleaned;
+    return /^[6-9]\d{9}$/.test(digits);
+  };
+
   const handleSendOtp = async (e) => {
     e.preventDefault();
-    if (!phone || phone.length < 10) {
-      toast.error('Please enter a valid 10-digit mobile number');
+    if (!validatePhone(phone)) {
+      toast.error('Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9');
       return;
     }
     try {
@@ -38,8 +51,12 @@ const AuthModal = () => {
 
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
+    if (!otp || !/^\d{6}$/.test(otp.trim())) {
+      toast.error('Please enter a valid 6-digit numeric OTP code');
+      return;
+    }
     try {
-      await verifyOtp(phone, otp, role, name);
+      await verifyOtp(phone, otp.trim(), role, name.trim());
     } catch (err) {
       // Handled in context
     }
@@ -150,7 +167,14 @@ const AuthModal = () => {
           {step === 'phone' ? (
             <form onSubmit={handleSendOtp} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">Mobile Number</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-bold text-slate-700">Mobile Number</label>
+                  {phone && (
+                    <span className={`text-[10px] font-bold ${validatePhone(phone) ? 'text-emerald-600' : 'text-rose-500'}`}>
+                      {validatePhone(phone) ? '✓ Valid Indian Mobile' : 'Invalid'}
+                    </span>
+                  )}
+                </div>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
                     <Phone className="w-4 h-4" />
@@ -158,12 +182,23 @@ const AuthModal = () => {
                   <input
                     type="tel"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => setPhone(e.target.value.replace(/[^\d+ -]/g, ''))}
                     placeholder="+91 98765 43210"
                     required
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none font-medium"
+                    className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm focus:ring-2 outline-none font-medium transition-colors ${
+                      phone && !validatePhone(phone)
+                        ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-100'
+                        : phone && validatePhone(phone)
+                        ? 'border-emerald-300 focus:border-emerald-500 focus:ring-emerald-100'
+                        : 'border-slate-200 focus:border-blue-600 focus:ring-blue-100'
+                    }`}
                   />
                 </div>
+                {phone && !validatePhone(phone) && (
+                  <p className="text-[11px] text-rose-500 font-semibold mt-1">
+                    Enter a valid 10-digit number starting with 6, 7, 8, or 9
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-3 gap-2 pt-1">

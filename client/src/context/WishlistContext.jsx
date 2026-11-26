@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../api/client';
 import { useAuth } from './AuthContext';
 import toast from 'react-hot-toast';
+import { trackEvent } from '../utils/analytics';
 
 const WishlistContext = createContext();
 
@@ -38,12 +39,15 @@ export const WishlistProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && user) {
+      setWishlist([]);
+      setSavedIds([]);
       fetchWishlist();
     } else {
       setWishlist([]);
+      setSavedIds([]);
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user?._id]);
 
   const isSaved = (propertyId) => {
     if (!propertyId) return false;
@@ -60,10 +64,23 @@ export const WishlistProvider = ({ children }) => {
     if (currentlySaved) {
       nextIds = savedIds.filter((id) => id !== propId);
       setWishlist((prev) => prev.filter((p) => p._id.toString() !== propId));
+      trackEvent('remove_from_wishlist', {
+        property_id: propId,
+        city: property.city,
+        locality: property.locality,
+        category: property.category,
+      });
       toast('Removed from saved wishlist', { icon: '🤍' });
     } else {
       nextIds = [...savedIds, propId];
       setWishlist((prev) => [property, ...prev]);
+      trackEvent('add_to_wishlist', {
+        property_id: propId,
+        city: property.city,
+        locality: property.locality,
+        category: property.category,
+        monthly_rent: property.pricing?.monthlyRent,
+      });
       toast.success('Saved to your wishlist! View anytime in Dashboard.', { icon: '❤️' });
     }
 

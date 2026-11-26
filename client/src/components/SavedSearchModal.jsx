@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/client';
 import toast from 'react-hot-toast';
+import { trackEvent } from '../utils/analytics';
 import { Bell, X, Phone, CheckCircle, MessageSquare } from 'lucide-react';
 
 const SavedSearchModal = ({ isOpen, onClose, filters }) => {
@@ -12,6 +13,19 @@ const SavedSearchModal = ({ isOpen, onClose, filters }) => {
 
   if (!isOpen) return null;
 
+  const validatePhone = (raw) => {
+    if (!raw) return false;
+    const cleaned = raw.replace(/[\s\-\(\)\.]/g, '');
+    const digits = cleaned.startsWith('+91')
+      ? cleaned.slice(3)
+      : (cleaned.startsWith('91') && cleaned.length === 12)
+        ? cleaned.slice(2)
+        : (cleaned.startsWith('0') && cleaned.length === 11)
+          ? cleaned.slice(1)
+          : cleaned;
+    return /^[6-9]\d{9}$/.test(digits);
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
     if (!isAuthenticated) {
@@ -20,20 +34,36 @@ const SavedSearchModal = ({ isOpen, onClose, filters }) => {
       return;
     }
 
+    if (!channels.whatsapp && !channels.email && !channels.webPush) {
+      toast.error('Please select at least one notification channel');
+      return;
+    }
+
+    if (channels.whatsapp && !validatePhone(whatsapp)) {
+      toast.error('Please enter a valid 10-digit WhatsApp number starting with 6, 7, 8, or 9');
+      return;
+    }
+
     try {
       setSaving(true);
       const res = await api.post('/searches', {
         criteria: filters,
         alertChannels: channels,
-        phone: whatsapp
+        phone: whatsapp.trim()
       });
 
       if (res.data.success) {
+        trackEvent('create_saved_search', {
+          city: filters.city || 'All',
+          locality: filters.locality || 'all',
+          category: filters.category || 'residential',
+          bhk: filters.bhk || undefined,
+        });
         toast.success(res.data.message);
         onClose();
       }
     } catch (err) {
-      toast.error('Failed to save search criteria');
+      toast.error(err.response?.data?.message || 'Failed to save search criteria');
     } finally {
       setSaving(false);
     }

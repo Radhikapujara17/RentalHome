@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import api from '../api/client';
 import toast from 'react-hot-toast';
 import KycUploadModal from '../components/KycUploadModal';
+import Seo from '../components/Seo';
 import { 
   User, 
   Home, 
@@ -22,35 +23,82 @@ import {
 } from 'lucide-react';
 
 const DashboardPage = () => {
-  const { user, demoLogin } = useAuth();
+  const { user, demoLogin, updateUserRole } = useAuth();
   const { wishlist, toggleWishlist, refreshWishlist } = useWishlist();
   const [properties, setProperties] = useState([]);
   const [visits, setVisits] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [switchingRole, setSwitchingRole] = useState(false);
   const [isKycModalOpen, setIsKycModalOpen] = useState(false);
   const [dashboardTab, setDashboardTab] = useState(user?.role === 'tenant' ? 'saved' : 'listings');
 
+  // Handle active user role switch (Tenant <-> Owner <-> Broker)
+  const handleRoleChange = async (targetRole) => {
+    if (!targetRole || user?.role === targetRole || switchingRole) return;
+    try {
+      setSwitchingRole(true);
+      setProperties([]); // immediately clear listings state to prevent bleeding
+      if (targetRole === 'tenant') {
+        setDashboardTab('saved');
+      } else {
+        setDashboardTab('listings');
+      }
+      await updateUserRole(targetRole);
+    } finally {
+      setSwitchingRole(false);
+    }
+  };
+
+  // Keep active tab & state in sync with authenticated user role
   useEffect(() => {
+    if (user?.role === 'tenant') {
+      setDashboardTab('saved');
+      setProperties([]);
+    } else {
+      setDashboardTab('listings');
+    }
+  }, [user?._id, user?.role]);
+
+  useEffect(() => {
+    let isCancelled = false;
+
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const [propsRes, visitsRes] = await Promise.all([
-          api.get('/properties/my/listings').catch(() => ({ data: { properties: [] } })),
-          api.get('/visits/my').catch(() => ({ data: { visits: [] } }))
-        ]);
-        if (propsRes.data.properties) setProperties(propsRes.data.properties);
-        if (visitsRes.data.visits) setVisits(visitsRes.data.visits);
+
+        if (user?.role === 'tenant') {
+          // Tenants do NOT fetch or possess property listings - reset and fetch visits only
+          setProperties([]);
+          const visitsRes = await api.get('/visits/my').catch(() => ({ data: { visits: [] } }));
+          if (!isCancelled && visitsRes.data.visits) {
+            setVisits(visitsRes.data.visits);
+          }
+        } else {
+          // Owners / Brokers / Admins fetch fresh listings and visits
+          const [propsRes, visitsRes] = await Promise.all([
+            api.get('/properties/my/listings').catch(() => ({ data: { properties: [] } })),
+            api.get('/visits/my').catch(() => ({ data: { visits: [] } }))
+          ]);
+          if (!isCancelled) {
+            if (propsRes.data.properties) setProperties(propsRes.data.properties);
+            if (visitsRes.data.visits) setVisits(visitsRes.data.visits);
+          }
+        }
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
       } finally {
-        setLoading(false);
+        if (!isCancelled) setLoading(false);
       }
     };
 
     if (user) {
       fetchDashboardData();
     }
-  }, [user]);
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [user?._id, user?.role]);
 
   if (!user) {
     return (
@@ -87,6 +135,7 @@ const DashboardPage = () => {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-10 space-y-8">
+      <Seo noIndex title="My Dashboard | RentNest" />
       
       {/* User Profile Banner */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
@@ -137,20 +186,43 @@ const DashboardPage = () => {
           </div>
         </div>
 
-        {/* Quick Role Switcher for Developer / Reviewer convenience */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[10px] uppercase font-bold text-slate-400">Switch Persona:</span>
-          {['tenant', 'owner', 'broker', 'admin'].map((r) => (
-            <button
-              key={r}
-              onClick={() => demoLogin(r)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition-all ${
-                user.role === r ? 'bg-slate-900 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              {r}
-            </button>
-          ))}
+        {/* Account Mode & Persona Controls */}
+        <div className="flex flex-col sm:items-end gap-3 w-full sm:w-auto">
+          {/* Active Account Role Switcher (Updates user's role in MongoDB) */}
+          <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-200">
+            <span className="text-[10px] font-extrabold uppercase text-slate-500 pl-1">Role:</span>
+            {['tenant', 'owner', 'broker'].map((r) => (
+              <button
+                key={r}
+                type="button"
+                disabled={switchingRole}
+                onClick={() => handleRoleChange(r)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition-all ${
+                  user.role === r
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                }`}
+                title={`Switch your profile role to ${r}`}
+              >
+                {r === 'tenant' ? '👤 Tenant' : r === 'owner' ? '🏠 Owner' : '💼 Broker'}
+              </button>
+            ))}
+          </div>
+
+          {/* Quick Demo Persona Bar (Demo accounts) */}
+          <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+            <span className="text-[10px] uppercase font-bold text-slate-400">Demo Login:</span>
+            {['tenant', 'owner', 'broker', 'admin'].map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => demoLogin(r)}
+                className="px-2 py-1 rounded-lg text-[10px] font-bold capitalize bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
+              >
+                {r}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -163,17 +235,19 @@ const DashboardPage = () => {
           {/* Tab Switcher */}
           <div className="flex items-center justify-between border-b border-slate-200 pb-3">
             <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setDashboardTab('listings')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 ${
-                  dashboardTab === 'listings'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                <Home className="w-3.5 h-3.5" />
-                <span>My Listings ({properties.length})</span>
-              </button>
+              {user.role !== 'tenant' && (
+                <button
+                  onClick={() => setDashboardTab('listings')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 ${
+                    dashboardTab === 'listings'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  <Home className="w-3.5 h-3.5" />
+                  <span>My Listings ({properties.length})</span>
+                </button>
+              )}
 
               <button
                 onClick={() => setDashboardTab('saved')}
@@ -188,7 +262,7 @@ const DashboardPage = () => {
               </button>
             </div>
 
-            {dashboardTab === 'listings' && (
+            {user.role !== 'tenant' && dashboardTab === 'listings' && (
               <Link
                 to="/post-property"
                 className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl flex items-center space-x-1.5 transition-colors shadow-sm"

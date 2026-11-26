@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /post-property
+Disallow: /edit-property
+Disallow: /login
+Disallow: /register
+Disallow: /api/
+
+Sitemap: /sitemap.xml

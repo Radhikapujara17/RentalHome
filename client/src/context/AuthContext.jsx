@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../api/client';
 import toast from 'react-hot-toast';
+import { trackEvent } from '../utils/analytics';
 
 const AuthContext = createContext();
 
@@ -20,11 +21,13 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       const res = await api.post('/auth/demo-login', { role });
       if (res.data.success) {
+        localStorage.removeItem('rentnest_wishlist_ids');
         setUser(res.data.user);
         setToken(res.data.token);
         localStorage.setItem('rentnest_token', res.data.token);
         localStorage.setItem('rentnest_user', JSON.stringify(res.data.user));
         toast.success(`Logged in as ${res.data.user.name} (${role.toUpperCase()})`);
+        trackEvent('login', { method: 'demo', role });
         setIsAuthModalOpen(false);
       }
     } catch (err) {
@@ -40,11 +43,13 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       const res = await api.post('/auth/verify-otp', { phone, otp, role, name });
       if (res.data.success) {
+        localStorage.removeItem('rentnest_wishlist_ids');
         setUser(res.data.user);
         setToken(res.data.token);
         localStorage.setItem('rentnest_token', res.data.token);
         localStorage.setItem('rentnest_user', JSON.stringify(res.data.user));
         toast.success(`Welcome to RentNest, ${res.data.user.name}!`);
+        trackEvent('login', { method: 'phone_otp', role: res.data.user.role || role || 'tenant' });
         setIsAuthModalOpen(false);
       }
     } catch (err) {
@@ -61,11 +66,13 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       const res = await api.post('/auth/register', formData);
       if (res.data.success) {
+        localStorage.removeItem('rentnest_wishlist_ids');
         setUser(res.data.user);
         setToken(res.data.token);
         localStorage.setItem('rentnest_token', res.data.token);
         localStorage.setItem('rentnest_user', JSON.stringify(res.data.user));
         toast.success(`Welcome to RentNest, ${res.data.user.name}!`);
+        trackEvent('sign_up', { method: 'password', role: res.data.user.role || 'tenant' });
         setIsAuthModalOpen(false);
         return { success: true, user: res.data.user };
       }
@@ -84,11 +91,13 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       const res = await api.post('/auth/login', { identifier, password });
       if (res.data.success) {
+        localStorage.removeItem('rentnest_wishlist_ids');
         setUser(res.data.user);
         setToken(res.data.token);
         localStorage.setItem('rentnest_token', res.data.token);
         localStorage.setItem('rentnest_user', JSON.stringify(res.data.user));
         toast.success(`Welcome back, ${res.data.user.name}!`);
+        trackEvent('login', { method: 'password', role: res.data.user.role || 'tenant' });
         setIsAuthModalOpen(false);
         return { success: true, user: res.data.user };
       }
@@ -101,11 +110,33 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Switch / Update Account Role for logged-in user
+  const updateUserRole = async (newRole) => {
+    try {
+      setLoading(true);
+      const res = await api.put('/auth/profile', { role: newRole });
+      if (res.data.success && res.data.user) {
+        setUser(res.data.user);
+        localStorage.setItem('rentnest_user', JSON.stringify(res.data.user));
+        toast.success(`Account role switched to ${newRole.toUpperCase()}!`);
+        trackEvent('switch_role', { role: newRole });
+        return { success: true, user: res.data.user };
+      }
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to update role';
+      toast.error(msg);
+      return { success: false, message: msg };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = () => {
     setUser(null);
     setToken(null);
     localStorage.removeItem('rentnest_token');
     localStorage.removeItem('rentnest_user');
+    localStorage.removeItem('rentnest_wishlist_ids');
     toast.success('Logged out successfully');
   };
 
@@ -120,6 +151,7 @@ export const AuthProvider = ({ children }) => {
         login,
         demoLogin,
         verifyOtp,
+        updateUserRole,
         logout,
         isAuthModalOpen,
         setIsAuthModalOpen,

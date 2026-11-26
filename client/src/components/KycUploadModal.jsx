@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../api/client';
 import toast from 'react-hot-toast';
 import ImageUploader from './ImageUploader';
+import { trackEvent } from '../utils/analytics';
 import { ShieldCheck, X, FileText, CheckCircle2 } from 'lucide-react';
 
 const KycUploadModal = ({ isOpen, onClose, onVerifiedSuccess }) => {
@@ -18,6 +19,10 @@ const KycUploadModal = ({ isOpen, onClose, onVerifiedSuccess }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!consumerName || consumerName.trim().length < 2) {
+      toast.error('Please enter the owner / consumer name printed on the document (at least 2 characters)');
+      return;
+    }
     if (!documentUrl) {
       toast.error('Please upload an electricity bill or tax document first');
       return;
@@ -28,12 +33,16 @@ const KycUploadModal = ({ isOpen, onClose, onVerifiedSuccess }) => {
       const res = await api.post('/auth/kyc/submit', {
         kycDocumentUrl: documentUrl,
         kycDocumentType: docType,
-        consumerName: consumerName || user?.name
+        consumerName: consumerName.trim()
       });
 
       if (res.data.success) {
         setSubmitted(true);
         setVerifiedResult(res.data);
+        trackEvent('submit_kyc', {
+          document_type: docType,
+          auto_verified: Boolean(res.data.verified),
+        });
         if (res.data.verified) {
           toast.success(res.data.message, { duration: 5000 });
           if (onVerifiedSuccess) onVerifiedSuccess();

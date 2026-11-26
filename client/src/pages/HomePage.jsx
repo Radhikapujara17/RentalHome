@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/client';
 import PropertyCard from '../components/PropertyCard';
+import Seo, { getSiteUrl } from '../components/Seo';
+import { trackEvent } from '../utils/analytics';
 import { 
   Search, 
   MapPin, 
@@ -96,6 +98,14 @@ const HomePage = () => {
 
   const handleSearch = (e) => {
     e.preventDefault();
+    trackEvent('search', {
+      source: 'home_hero',
+      city: city || 'All',
+      category,
+      locality: locality || 'all',
+      bhk: category === 'residential' ? (bhk || 'any') : undefined,
+      commercial_type: category === 'commercial' ? (commercialType || 'all') : undefined,
+    });
     const params = new URLSearchParams();
     if (city && city !== 'All') params.append('city', city);
     if (category) params.append('category', category);
@@ -105,8 +115,39 @@ const HomePage = () => {
     navigate(`/explore?${params.toString()}`);
   };
 
+  const siteUrl = getSiteUrl();
+  const homeJsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Organization',
+        name: 'RentNest',
+        url: siteUrl,
+        description:
+          "Rajkot and Gujarat's transparent rental marketplace with verified PGVCL meters, water reality, and zero hidden broker costs.",
+        areaServed: ['Rajkot', 'Ahmedabad', 'Surat', 'Vadodara'],
+      },
+      {
+        '@type': 'WebSite',
+        name: 'RentNest',
+        url: siteUrl,
+        potentialAction: {
+          '@type': 'SearchAction',
+          target: `${siteUrl}/explore?search={search_term_string}`,
+          'query-input': 'required name=search_term_string',
+        },
+      },
+    ],
+  };
+
   return (
     <div className="space-y-16 pb-16">
+      <Seo
+        title="RentNest — Zero Brokerage Rental Homes & Commercial Spaces in Gujarat"
+        description="Find verified rental flats, houses, PG & commercial spaces in Rajkot, Ahmedabad, Surat & Vadodara with direct PGVCL meters, scheduled water reality, and zero hidden costs."
+        canonicalPath="/"
+        jsonLd={homeJsonLd}
+      />
       
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-b from-blue-900 via-slate-900 to-slate-950 text-white pt-12 sm:pt-16 pb-20 sm:pb-24 px-4 sm:px-6 lg:px-8">
@@ -243,7 +284,10 @@ const HomePage = () => {
               <button
                 key={loc}
                 type="button"
-                onClick={() => navigate(`/explore?city=${encodeURIComponent(city)}&locality=${encodeURIComponent(loc)}`)}
+                onClick={() => {
+                  trackEvent('search', { source: 'home_locality_chip', city, locality: loc, category });
+                  navigate(`/explore?city=${encodeURIComponent(city)}&locality=${encodeURIComponent(loc)}`);
+                }}
                 className="px-2.5 sm:px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 text-slate-200 font-medium transition-colors border border-white/10 text-[11px] sm:text-xs"
               >
                 {loc}

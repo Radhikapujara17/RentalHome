@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Seo from '../components/Seo';
+import toast from 'react-hot-toast';
 import { 
   Home, 
   User, 
@@ -20,6 +22,68 @@ import {
 } from 'lucide-react';
 
 const CITIES = ['Rajkot', 'Ahmedabad', 'Surat', 'Vadodara'];
+
+// Phone validation helper (accepts 10-digit Indian standard)
+const validatePhone = (rawPhone) => {
+  if (!rawPhone) return { isValid: false, message: 'Phone number is required' };
+  const cleaned = rawPhone.replace(/[\s\-\(\)\.]/g, '');
+  const digits = cleaned.startsWith('+91')
+    ? cleaned.slice(3)
+    : (cleaned.startsWith('91') && cleaned.length === 12)
+      ? cleaned.slice(2)
+      : (cleaned.startsWith('0') && cleaned.length === 11)
+        ? cleaned.slice(1)
+        : cleaned;
+  const isValid = /^[6-9]\d{9}$/.test(digits);
+  return {
+    isValid,
+    message: isValid ? '' : 'Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9'
+  };
+};
+
+// Password strength & requirement checker
+const getPasswordStrength = (pw) => {
+  if (!pw) {
+    return {
+      score: 0,
+      label: 'Required',
+      color: 'bg-slate-200',
+      hasLength: false,
+      hasLetter: false,
+      hasNumber: false,
+      isValid: false
+    };
+  }
+  const hasLength = pw.length >= 6;
+  const hasLetter = /[a-zA-Z]/.test(pw);
+  const hasNumber = /[0-9]/.test(pw);
+  const hasSpecial = /[^a-zA-Z0-9]/.test(pw);
+
+  let score = 0;
+  if (hasLength) score++;
+  if (hasLetter && hasNumber) score++;
+  if (pw.length >= 8 && hasSpecial) score++;
+
+  let label = 'Weak';
+  let color = 'bg-rose-500';
+  if (score === 2) {
+    label = 'Medium';
+    color = 'bg-amber-500';
+  } else if (score >= 3) {
+    label = 'Strong';
+    color = 'bg-emerald-500';
+  }
+
+  return {
+    score,
+    label,
+    color,
+    hasLength,
+    hasLetter,
+    hasNumber,
+    isValid: hasLength && hasLetter && hasNumber
+  };
+};
 
 const AuthPage = () => {
   const navigate = useNavigate();
@@ -49,39 +113,86 @@ const AuthPage = () => {
   });
 
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // If already authenticated, redirect to dashboard
+  const phoneValidation = validatePhone(registerData.phone);
+  const passwordStrength = getPasswordStrength(registerData.password);
+  const isPasswordMatch = registerData.password && confirmPassword && registerData.password === confirmPassword;
+
+  // If already authenticated, redirect to explore properties
   React.useEffect(() => {
     if (isAuthenticated) {
-      navigate('/dashboard');
+      navigate('/explore', { replace: true });
     }
   }, [isAuthenticated, navigate]);
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
-    if (!loginData.identifier || !loginData.password) return;
+    if (!loginData.identifier.trim()) {
+      toast.error('Please enter your phone number or email');
+      return;
+    }
+    if (!loginData.password || loginData.password.length < 6) {
+      toast.error('Password must be at least 6 characters long');
+      return;
+    }
     setSubmitting(true);
     const res = await login(loginData.identifier, loginData.password);
     setSubmitting(false);
     if (res.success) {
-      navigate('/dashboard');
+      navigate('/explore', { replace: true });
     }
   };
 
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
-    if (!registerData.name || !registerData.phone || !registerData.password) return;
+    if (!registerData.name.trim() || registerData.name.trim().length < 2) {
+      toast.error('Please provide your full name (minimum 2 characters)');
+      return;
+    }
+    const phoneVal = validatePhone(registerData.phone);
+    if (!phoneVal.isValid) {
+      toast.error(phoneVal.message);
+      return;
+    }
+    if (registerData.email && registerData.email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(registerData.email.trim())) {
+        toast.error('Please provide a valid email address');
+        return;
+      }
+    }
+    if (registerData.role === 'broker' && (!registerData.agencyName || !registerData.agencyName.trim())) {
+      toast.error('Please enter your registered real estate agency name');
+      return;
+    }
+    const pwVal = getPasswordStrength(registerData.password);
+    if (!pwVal.isValid) {
+      toast.error('Password must be at least 6 characters long and contain both letters and numbers');
+      return;
+    }
+    if (registerData.password !== confirmPassword) {
+      toast.error('Passwords do not match. Please retype confirm password.');
+      return;
+    }
+
     setSubmitting(true);
     const res = await register(registerData);
     setSubmitting(false);
     if (res.success) {
-      navigate('/dashboard');
+      navigate('/explore', { replace: true });
     }
   };
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40">
+      <Seo
+        noIndex
+        title="Login or Sign Up | RentNest"
+        description="Sign in to RentNest to shortlist rental properties, schedule physical visits, and chat directly with verified owners."
+      />
       <div className="max-w-5xl w-full grid grid-cols-1 lg:grid-cols-12 bg-white rounded-3xl shadow-2xl border border-slate-200/80 overflow-hidden">
         
         {/* Left Branding Banner (Modern NYC Aesthetic) */}
@@ -343,18 +454,36 @@ const AuthPage = () => {
               {/* Phone & Email (2 columns) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700">Phone Number</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-700">Phone Number</label>
+                    {registerData.phone && (
+                      <span className={`text-[10px] font-bold ${phoneValidation.isValid ? 'text-emerald-600' : 'text-rose-500'}`}>
+                        {phoneValidation.isValid ? '✓ Valid' : 'Invalid'}
+                      </span>
+                    )}
+                  </div>
                   <div className="relative">
                     <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                     <input
                       type="tel"
                       required
-                      placeholder="+919876543201"
+                      placeholder="+91 98765 43210"
                       value={registerData.phone}
-                      onChange={(e) => setRegisterData({ ...registerData, phone: e.target.value })}
-                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-xs font-medium outline-none transition-all"
+                      onChange={(e) => setRegisterData({ ...registerData, phone: e.target.value.replace(/[^\d+ -]/g, '') })}
+                      className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-xs font-medium outline-none transition-all ${
+                        registerData.phone && !phoneValidation.isValid
+                          ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-100'
+                          : registerData.phone && phoneValidation.isValid
+                          ? 'border-emerald-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100'
+                          : 'border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                      }`}
                     />
                   </div>
+                  {registerData.phone && !phoneValidation.isValid && (
+                    <p className="text-[10px] text-rose-500 font-semibold mt-0.5">
+                      {phoneValidation.message}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-1">
@@ -369,6 +498,23 @@ const AuthPage = () => {
                       className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-xs font-medium outline-none transition-all"
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* City Selection */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700">Operational City</label>
+                <div className="relative">
+                  <MapPin className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                  <select
+                    value={registerData.city}
+                    onChange={(e) => setRegisterData({ ...registerData, city: e.target.value })}
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-xs font-medium outline-none transition-all bg-white"
+                  >
+                    {CITIES.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
@@ -387,35 +533,36 @@ const AuthPage = () => {
                 </div>
               )}
 
-              {/* City & Password (2 columns) */}
+              {/* Password & Confirm Password (2 columns) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Password Field */}
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700">City</label>
-                  <div className="relative">
-                    <MapPin className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
-                    <select
-                      value={registerData.city}
-                      onChange={(e) => setRegisterData({ ...registerData, city: e.target.value })}
-                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-xs font-medium outline-none transition-all bg-white"
-                    >
-                      {CITIES.map((c) => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                    </select>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-700">Password</label>
+                    {registerData.password && (
+                      <span className={`text-[10px] font-bold ${
+                        passwordStrength.score >= 3 ? 'text-emerald-600' :
+                        passwordStrength.score === 2 ? 'text-amber-600' : 'text-rose-500'
+                      }`}>
+                        {passwordStrength.label}
+                      </span>
+                    )}
                   </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700">Password</label>
                   <div className="relative">
                     <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       required
-                      placeholder="Minimum 6 characters"
+                      placeholder="Min. 6 chars (letters & numbers)"
                       value={registerData.password}
                       onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
-                      className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-xs font-medium outline-none transition-all"
+                      className={`w-full pl-10 pr-10 py-2.5 rounded-xl border text-xs font-medium outline-none transition-all ${
+                        registerData.password && !passwordStrength.isValid
+                          ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-100'
+                          : registerData.password && passwordStrength.isValid
+                          ? 'border-emerald-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100'
+                          : 'border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                      }`}
                     />
                     <button
                       type="button"
@@ -425,6 +572,71 @@ const AuthPage = () => {
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
+
+                  {/* Password Strength Indicator */}
+                  {registerData.password && (
+                    <div className="space-y-1.5 pt-1">
+                      <div className="flex gap-1 h-1.5 w-full">
+                        <div className={`h-full flex-1 rounded-full ${passwordStrength.score >= 1 ? passwordStrength.color : 'bg-slate-200'} transition-all duration-300`}></div>
+                        <div className={`h-full flex-1 rounded-full ${passwordStrength.score >= 2 ? passwordStrength.color : 'bg-slate-200'} transition-all duration-300`}></div>
+                        <div className={`h-full flex-1 rounded-full ${passwordStrength.score >= 3 ? passwordStrength.color : 'bg-slate-200'} transition-all duration-300`}></div>
+                      </div>
+                      <div className="flex flex-wrap gap-x-2 text-[10px] text-slate-500">
+                        <span className={passwordStrength.hasLength ? 'text-emerald-600 font-semibold' : 'text-slate-400'}>
+                          {passwordStrength.hasLength ? '✓' : '•'} 6+ chars
+                        </span>
+                        <span className={passwordStrength.hasLetter ? 'text-emerald-600 font-semibold' : 'text-slate-400'}>
+                          {passwordStrength.hasLetter ? '✓' : '•'} Letters
+                        </span>
+                        <span className={passwordStrength.hasNumber ? 'text-emerald-600 font-semibold' : 'text-slate-400'}>
+                          {passwordStrength.hasNumber ? '✓' : '•'} Numbers
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Confirm Password Field */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-700">Confirm Password</label>
+                    {confirmPassword && (
+                      <span className={`text-[10px] font-bold ${
+                        isPasswordMatch ? 'text-emerald-600' : 'text-rose-500'
+                      }`}>
+                        {isPasswordMatch ? '✓ Passwords match' : 'Passwords do not match'}
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      required
+                      placeholder="Re-enter your password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className={`w-full pl-10 pr-10 py-2.5 rounded-xl border text-xs font-medium outline-none transition-all ${
+                        confirmPassword && !isPasswordMatch
+                          ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-100'
+                          : confirmPassword && isPasswordMatch
+                          ? 'border-emerald-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100'
+                          : 'border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600"
+                    >
+                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {confirmPassword && !isPasswordMatch && (
+                    <p className="text-[10px] text-rose-500 font-semibold mt-0.5">
+                      Must match the password entered above
+                    </p>
+                  )}
                 </div>
               </div>
 

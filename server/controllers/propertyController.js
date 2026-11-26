@@ -32,16 +32,39 @@ exports.getProperties = async (req, res, next) => {
       search
     } = req.query;
 
-    const query = { status: 'active', isQuarantined: false };
+    const query = { status: 'active', isQuarantined: { $ne: true } };
+    const andConditions = [];
 
-    // Dynamic Multi-City Filter
+    // Dynamic Multi-City Filter (treat legacy docs missing city as default 'Rajkot')
     if (city && city !== 'All') {
-      query.city = city;
+      if (city === 'Rajkot') {
+        andConditions.push({
+          $or: [
+            { city: 'Rajkot' },
+            { city: { $exists: false } },
+            { city: null },
+            { city: '' }
+          ]
+        });
+      } else {
+        andConditions.push({ city });
+      }
     }
 
-    // Category (residential vs commercial)
+    // Category (residential vs commercial; treat legacy docs missing category as 'residential')
     if (category) {
-      query.category = category;
+      if (category === 'residential') {
+        andConditions.push({
+          $or: [
+            { category: 'residential' },
+            { category: { $exists: false } },
+            { category: null },
+            { category: '' }
+          ]
+        });
+      } else {
+        andConditions.push({ category });
+      }
     }
 
     // Commercial Specific Filters
@@ -66,12 +89,18 @@ exports.getProperties = async (req, res, next) => {
 
     // Search keyword in title, societyName, locality, or fullAddress
     if (search) {
-      query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { societyName: { $regex: search, $options: 'i' } },
-        { locality: { $regex: search, $options: 'i' } },
-        { fullAddress: { $regex: search, $options: 'i' } }
-      ];
+      andConditions.push({
+        $or: [
+          { title: { $regex: search, $options: 'i' } },
+          { societyName: { $regex: search, $options: 'i' } },
+          { locality: { $regex: search, $options: 'i' } },
+          { fullAddress: { $regex: search, $options: 'i' } }
+        ]
+      });
+    }
+
+    if (andConditions.length > 0) {
+      query.$and = andConditions;
     }
 
     // Locality filter (support comma separated multi-select)
@@ -195,6 +224,31 @@ exports.getProperty = async (req, res, next) => {
 exports.createProperty = async (req, res, next) => {
   try {
     req.body.owner = req.user.id;
+
+    const { title, locality, societyName, fullAddress, pricing, carpetAreaSqFt } = req.body;
+
+    // Strict input validation
+    if (!title || typeof title !== 'string' || title.trim().length < 5) {
+      return res.status(400).json({ success: false, message: 'Property title is required (minimum 5 characters).' });
+    }
+    if (!locality || !locality.trim()) {
+      return res.status(400).json({ success: false, message: 'Locality is required.' });
+    }
+    if (!societyName || !societyName.trim()) {
+      return res.status(400).json({ success: false, message: 'Society or apartment name is required.' });
+    }
+    if (!fullAddress || fullAddress.trim().length < 8) {
+      return res.status(400).json({ success: false, message: 'Full property address is required (minimum 8 characters).' });
+    }
+    if (!carpetAreaSqFt || Number(carpetAreaSqFt) <= 0) {
+      return res.status(400).json({ success: false, message: 'Carpet area must be greater than 0 sq ft.' });
+    }
+    if (!pricing || Number(pricing.monthlyRent) <= 0) {
+      return res.status(400).json({ success: false, message: 'Monthly rent must be greater than 0.' });
+    }
+    if (pricing.securityDeposit !== undefined && Number(pricing.securityDeposit) < 0) {
+      return res.status(400).json({ success: false, message: 'Security deposit cannot be negative.' });
+    }
 
     // Ownership Document Verification on Server Side
     if (req.body.ownershipDocumentUrl) {
@@ -355,6 +409,22 @@ exports.deleteProperty = async (req, res, next) => {
 // @access  Private
 exports.getMyProperties = async (req, res, next) => {
   try {
+    // Explicit no-cache on dynamic user listings
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+
+    // Tenants do not possess property listings
+    if (req.user && req.user.role === 'tenant') {
+      return res.status(200).json({
+        success: true,
+        count: 0,
+        properties: []
+      });
+    }
+
     const properties = await Property.find({ owner: req.user.id }).sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -404,6 +474,11 @@ exports.getLocalityStats = async (req, res, next) => {
 exports.reportProperty = async (req, res, next) => {
   try {
     const { reason, comments } = req.body;
+
+    if (!reason || !reason.trim()) {
+      return res.status(400).json({ success: false, message: 'Please provide a reason for reporting this listing.' });
+    }
+
     const property = await Property.findById(req.params.id);
 
     if (!property) {

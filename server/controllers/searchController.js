@@ -1,4 +1,5 @@
 const SavedSearch = require('../models/SavedSearch');
+const { normalizeAndValidatePhone } = require('../utils/helpers');
 
 // @desc    Save Search Criteria with WhatsApp / Email Alert Subscription
 // @route   POST /api/v1/searches
@@ -6,6 +7,13 @@ const SavedSearch = require('../models/SavedSearch');
 exports.saveSearch = async (req, res, next) => {
   try {
     const { criteria, alertChannels, phone } = req.body;
+
+    if (alertChannels?.whatsapp && phone) {
+      const phoneCheck = normalizeAndValidatePhone(phone);
+      if (!phoneCheck.isValid) {
+        return res.status(400).json({ success: false, message: phoneCheck.error });
+      }
+    }
 
     const savedSearch = await SavedSearch.create({
       user: req.user.id,

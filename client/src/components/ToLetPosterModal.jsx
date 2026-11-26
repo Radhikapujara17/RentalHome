@@ -1,21 +1,37 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { QRCodeSVG } from 'qrcode.react';
-import { X, Printer, Download, Home, Phone, MapPin, CheckCircle } from 'lucide-react';
+import { X, Printer, Phone, MapPin } from 'lucide-react';
+import { trackEvent } from '../utils/analytics';
 
 const ToLetPosterModal = ({ property, isOpen, onClose }) => {
   const printRef = useRef();
+
+  useEffect(() => {
+    if (!isOpen || !property) return;
+    document.body.classList.add('print-poster-active');
+    return () => {
+      document.body.classList.remove('print-poster-active');
+    };
+  }, [isOpen, property]);
 
   if (!isOpen || !property) return null;
 
   const currentUrl = `${window.location.origin}/property/${property.slug || property._id}`;
 
   const handlePrint = () => {
+    trackEvent('print_tolet_poster', {
+      property_id: property._id,
+      listing_number: property.listingNumber,
+      city: property.city || 'Rajkot',
+      locality: property.locality,
+    });
     window.print();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/70 backdrop-blur-sm animate-fade-in overflow-y-auto">
-      <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-4 sm:my-6 max-h-[92vh] flex flex-col">
+  return createPortal(
+    <div className="tolet-poster-portal fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/70 backdrop-blur-sm animate-fade-in overflow-y-auto">
+      <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-4 sm:my-6 max-h-[92vh] flex flex-col print:max-w-none print:w-full print:my-0 print:max-h-none print:rounded-none print:shadow-none print:border-0 print:overflow-visible">
         
         {/* Modal Controls Header */}
         <div className="bg-slate-900 px-6 py-4 text-white flex items-center justify-between print:hidden">
@@ -43,23 +59,23 @@ const ToLetPosterModal = ({ property, isOpen, onClose }) => {
         </div>
 
         {/* Printable Poster Canvas */}
-        <div ref={printRef} className="p-6 sm:p-12 text-center bg-white space-y-6 overflow-y-auto">
+        <div ref={printRef} className="p-6 sm:p-12 text-center bg-white space-y-6 overflow-y-auto print:p-4 print:space-y-4 print:overflow-visible">
           
           {/* Top Header Badge */}
-          <div className="inline-block bg-rose-600 text-white font-black text-2xl sm:text-3xl px-8 py-3 rounded-2xl tracking-widest uppercase shadow-lg transform -rotate-1">
+          <div className="inline-block bg-rose-600 text-white font-black text-2xl sm:text-3xl px-8 py-3 rounded-2xl tracking-widest uppercase shadow-lg transform -rotate-1 print:shadow-none print:transform-none">
             TO LET / ભાડે આપવાનું છે
           </div>
 
           {/* Subheading */}
           <div className="space-y-1">
-            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight print:text-3xl">
               {property.category === 'commercial' 
                 ? (property.commercialDetails?.commercialType ? property.commercialDetails.commercialType.replace('_', ' ').toUpperCase() : 'COMMERCIAL PREMISES')
                 : `${property.bhk} Luxury Rental Flat`}
             </h2>
             <p className="text-lg font-bold text-blue-700 flex items-center justify-center space-x-1.5">
               <MapPin className="w-5 h-5 text-blue-600" />
-              <span>{property.societyName}, {property.locality}, Rajkot</span>
+              <span>{property.societyName}, {property.locality}, {property.city || 'Rajkot'}</span>
             </p>
           </div>
 
@@ -96,9 +112,9 @@ const ToLetPosterModal = ({ property, isOpen, onClose }) => {
           </div>
 
           {/* Dynamic QR Code Card */}
-          <div className="bg-gradient-to-b from-blue-50 to-indigo-50/50 p-6 rounded-3xl border-2 border-dashed border-blue-300 max-w-sm mx-auto space-y-3">
+          <div className="bg-gradient-to-b from-blue-50 to-indigo-50/50 p-6 rounded-3xl border-2 border-dashed border-blue-300 max-w-sm mx-auto space-y-3 print:p-4 print:space-y-2">
             <div className="flex justify-center">
-              <div className="p-3 bg-white rounded-2xl shadow-md border border-slate-200">
+              <div className="p-3 bg-white rounded-2xl shadow-md border border-slate-200 print:shadow-none">
                 <QRCodeSVG
                   value={currentUrl}
                   size={160}
@@ -134,7 +150,8 @@ const ToLetPosterModal = ({ property, isOpen, onClose }) => {
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

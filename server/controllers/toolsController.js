@@ -70,6 +70,22 @@ exports.calculateHra = async (req, res) => {
       financialYear = '2026-2027'
     } = req.body;
 
+    if (Number(basicSalary) <= 0) {
+      return res.status(400).json({ success: false, message: 'Monthly basic salary must be greater than 0' });
+    }
+    if (Number(rentPaid) <= 0) {
+      return res.status(400).json({ success: false, message: 'Monthly rent paid must be greater than 0' });
+    }
+    if (Number(hraReceived) < 0) {
+      return res.status(400).json({ success: false, message: 'HRA received cannot be negative' });
+    }
+    if (panNumber && panNumber.trim()) {
+      const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+      if (!panRegex.test(panNumber.trim().toUpperCase())) {
+        return res.status(400).json({ success: false, message: 'Please provide a valid 10-character PAN number (e.g. ABCDE1234F)' });
+      }
+    }
+
     const annualBasic = basicSalary * 12;
     const annualHra = hraReceived * 12;
     const annualRent = rentPaid * 12;
@@ -138,6 +154,22 @@ exports.generateAgreement = async (req, res) => {
       noticePeriodDays = 30,
       startDate = new Date().toISOString().split('T')[0]
     } = req.body;
+
+    if (!landlordName || !landlordName.trim()) {
+      return res.status(400).json({ success: false, message: 'Landlord name is required.' });
+    }
+    if (!tenantName || !tenantName.trim()) {
+      return res.status(400).json({ success: false, message: 'Tenant name is required.' });
+    }
+    if (!propertyAddress || !propertyAddress.trim()) {
+      return res.status(400).json({ success: false, message: 'Property address is required.' });
+    }
+    if (Number(monthlyRent) <= 0) {
+      return res.status(400).json({ success: false, message: 'Monthly rent must be greater than 0.' });
+    }
+    if (Number(securityDeposit) < 0) {
+      return res.status(400).json({ success: false, message: 'Security deposit cannot be negative.' });
+    }
 
     const agreementText = `
 RESIDENTIAL RENTAL LEASE AGREEMENT (11 MONTHS)

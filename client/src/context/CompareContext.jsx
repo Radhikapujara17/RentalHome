@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 import toast from 'react-hot-toast';
+import { trackEvent } from '../utils/analytics';
 
 const CompareContext = createContext();
 
@@ -11,6 +12,7 @@ export const CompareProvider = ({ children }) => {
     const exists = shortlist.some((p) => p._id === property._id);
     if (exists) {
       setShortlist(shortlist.filter((p) => p._id !== property._id));
+      trackEvent('compare_property', { action: 'remove', property_id: property._id });
       toast('Removed from comparison', { icon: '🗑️' });
     } else {
       if (shortlist.length >= 3) {
@@ -18,6 +20,13 @@ export const CompareProvider = ({ children }) => {
         return;
       }
       setShortlist([...shortlist, property]);
+      trackEvent('compare_property', {
+        action: 'add',
+        property_id: property._id,
+        city: property.city,
+        locality: property.locality,
+        compare_count: shortlist.length + 1,
+      });
       toast.success(`Added to compare (${shortlist.length + 1}/3)`);
     }
   };

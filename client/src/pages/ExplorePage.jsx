@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../api/client';
 import PropertyCard from '../components/PropertyCard';
 import SplitMap from '../components/SplitMap';
 import FilterBar from '../components/FilterBar';
 import SavedSearchModal from '../components/SavedSearchModal';
+import Seo, { getSiteUrl } from '../components/Seo';
+import { trackEvent } from '../utils/analytics';
 import { Map, List, Home, AlertCircle, Bell, Building2 } from 'lucide-react';
 
 const ExplorePage = () => {
@@ -15,6 +17,7 @@ const ExplorePage = () => {
   const [hoveredPropertyId, setHoveredPropertyId] = useState(null);
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'map' on mobile screens
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
+  const isInitialExploreLoadRef = useRef(true);
 
   const initialCity = searchParams.get('city') || localStorage.getItem('rentnest_selected_city') || 'Rajkot';
 
@@ -58,6 +61,22 @@ const ExplorePage = () => {
         const res = await api.get(`/properties?${queryParams.toString()}`);
         if (res.data.success) {
           setProperties(res.data.properties);
+          if (isInitialExploreLoadRef.current) {
+            isInitialExploreLoadRef.current = false;
+          } else {
+            trackEvent('search', {
+              source: 'explore_filters',
+              city: filters.city || 'All',
+              category: filters.category,
+              locality: filters.locality || undefined,
+              bhk: filters.bhk || undefined,
+              commercial_type: filters.commercialType || undefined,
+              zero_brokerage: filters.zeroBrokerage || undefined,
+              meter_type: filters.meterType || undefined,
+              search_term: filters.search || undefined,
+              result_count: res.data.properties.length,
+            });
+          }
         }
       } catch (err) {
         console.error('Failed to fetch properties:', err);
@@ -103,9 +122,48 @@ const ExplorePage = () => {
   };
 
   const isCommercial = filters.category === 'commercial';
+  const cityLabel = filters.city || 'Gujarat';
+  const localityPrefix = filters.locality ? `${filters.locality}, ` : '';
+  const bhkPrefix = !isCommercial && filters.bhk ? `${filters.bhk} ` : '';
+  const categoryLabel = isCommercial ? 'Commercial Spaces for Rent' : 'Flats & Homes for Rent';
+  const exploreTitle = `${bhkPrefix}${categoryLabel} in ${localityPrefix}${cityLabel} | RentNest`;
+  const exploreDescription = `Browse ${properties.length > 0 ? `${properties.length}+ ` : ''}verified ${bhkPrefix.toLowerCase()}${isCommercial ? 'commercial spaces, offices & shops' : 'rental flats, homes & PG'} in ${localityPrefix}${cityLabel}. Zero hidden charges and verified electricity meters.`;
+
+  const canonicalParams = new URLSearchParams();
+  if (filters.city) canonicalParams.set('city', filters.city);
+  if (filters.category && filters.category !== 'residential') canonicalParams.set('category', filters.category);
+  if (filters.locality) canonicalParams.set('locality', filters.locality);
+  if (filters.bhk) canonicalParams.set('bhk', filters.bhk);
+  const canonicalQuery = canonicalParams.toString();
+  const exploreCanonicalPath = canonicalQuery ? `/explore?${canonicalQuery}` : '/explore';
+
+  const siteUrl = getSiteUrl();
+  const exploreJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: exploreTitle,
+    description: exploreDescription,
+    url: `${siteUrl}${exploreCanonicalPath}`,
+    mainEntity: {
+      '@type': 'ItemList',
+      numberOfItems: properties.length,
+      itemListElement: properties.slice(0, 10).map((prop, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        url: `${siteUrl}/property/${prop.slug || prop._id}`,
+        name: prop.title,
+      })),
+    },
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <Seo
+        title={exploreTitle}
+        description={exploreDescription}
+        canonicalPath={exploreCanonicalPath}
+        jsonLd={exploreJsonLd}
+      />
       
       {/* Category Toggle Tabs */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm">

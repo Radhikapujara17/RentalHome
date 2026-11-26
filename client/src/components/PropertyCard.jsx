@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useCompare } from '../context/CompareContext';
 import { useWishlist } from '../context/WishlistContext';
+import { trackEvent } from '../utils/analytics';
 import { 
   ShieldCheck, 
   MapPin, 
@@ -253,6 +254,16 @@ const PropertyCard = ({ property, onSelectOnMap, onHover, onLeave }) => {
             href={whatsappUrl}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() =>
+              trackEvent('contact_owner', {
+                channel: 'whatsapp',
+                source: 'property_card',
+                property_id: property._id,
+                city: property.city || 'Rajkot',
+                locality: property.locality,
+                category: property.category,
+              })
+            }
             className="flex-1 py-2 px-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 shadow-sm transition-colors active:scale-95"
           >
             <MessageCircle className="w-3.5 h-3.5" />

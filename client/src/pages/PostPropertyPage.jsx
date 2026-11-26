@@ -3,6 +3,8 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import ImageUploader from '../components/ImageUploader';
+import Seo from '../components/Seo';
+import { trackEvent } from '../utils/analytics';
 import toast from 'react-hot-toast';
 import { 
   Building2, 
@@ -126,7 +128,7 @@ const PostPropertyPage = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEdit = Boolean(id);
-  const { user, isAuthenticated, demoLogin, setIsAuthModalOpen } = useAuth();
+  const { user, isAuthenticated, demoLogin, updateUserRole, setIsAuthModalOpen } = useAuth();
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [loadingListing, setLoadingListing] = useState(isEdit);
@@ -334,11 +336,135 @@ const PostPropertyPage = () => {
     }));
   };
 
+  const validateStep = (stepNumber) => {
+    const isCommercial = formData.category === 'commercial';
+    if (stepNumber === 1) {
+      if (!formData.title || formData.title.trim().length < 5) {
+        toast.error('Please enter a listing title (at least 5 characters)');
+        return false;
+      }
+      if (!formData.carpetAreaSqFt || Number(formData.carpetAreaSqFt) <= 0) {
+        toast.error('Please enter a valid carpet area in sq ft (> 0)');
+        return false;
+      }
+      if (formData.floorNumber !== undefined && formData.totalFloors !== undefined) {
+        if (Number(formData.floorNumber) > Number(formData.totalFloors)) {
+          toast.error('Floor number cannot be higher than total floors in building');
+          return false;
+        }
+      }
+      if (isCommercial) {
+        if (!formData.commercialDetails.connectedPowerLoadHp || Number(formData.commercialDetails.connectedPowerLoadHp) < 1) {
+          toast.error('Please enter valid connected power load (min 1 HP)');
+          return false;
+        }
+      }
+      return true;
+    }
+
+    if (stepNumber === 2) {
+      if (!formData.city || !formData.city.trim()) {
+        toast.error('Please select a city');
+        return false;
+      }
+      if (!formData.locality || !formData.locality.trim() || formData.locality === 'All Localities') {
+        toast.error('Please select a locality');
+        return false;
+      }
+      if (!formData.societyName || !formData.societyName.trim()) {
+        toast.error('Please enter society or building name');
+        return false;
+      }
+      if (!formData.fullAddress || formData.fullAddress.trim().length < 8) {
+        toast.error('Please enter complete property address (min 8 characters)');
+        return false;
+      }
+      return true;
+    }
+
+    if (stepNumber === 3) {
+      if (!formData.pricing.monthlyRent || Number(formData.pricing.monthlyRent) <= 0) {
+        toast.error('Monthly rent must be greater than 0');
+        return false;
+      }
+      if (formData.pricing.securityDeposit === undefined || Number(formData.pricing.securityDeposit) < 0) {
+        toast.error('Security deposit cannot be negative');
+        return false;
+      }
+      if (formData.pricing.maintenanceAmount === undefined || Number(formData.pricing.maintenanceAmount) < 0) {
+        toast.error('Maintenance amount cannot be negative');
+        return false;
+      }
+      if (isCommercial && formData.commercialDetails.gstin && formData.commercialDetails.gstin.trim()) {
+        const gstinRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+        if (!gstinRegex.test(formData.commercialDetails.gstin.trim().toUpperCase())) {
+          toast.error('Please enter a valid 15-character GSTIN or leave blank');
+          return false;
+        }
+      }
+      return true;
+    }
+
+    if (stepNumber === 4) {
+      if (formData.utilities.electricityMeterType === 'sub_meter_owner_rate') {
+        if (!formData.utilities.subMeterUnitRate || Number(formData.utilities.subMeterUnitRate) <= 0) {
+          toast.error('Please specify the sub-meter unit tariff (₹/unit)');
+          return false;
+        }
+      }
+      return true;
+    }
+
+    if (stepNumber === 5) {
+      const hasPhoto = formData.photoUrl && formData.photoUrl.trim() !== '';
+      const hasPhotosArray = Array.isArray(formData.photos) && formData.photos.length > 0;
+      if (!hasPhoto && !hasPhotosArray) {
+        toast.error('Please upload or provide at least one photo of the property');
+        return false;
+      }
+      if (formData.consumerNumber && formData.consumerNumber.trim()) {
+        const cleanNo = formData.consumerNumber.trim();
+        if (cleanNo.length < 5 || cleanNo.length > 25) {
+          toast.error('Please enter a valid electricity consumer number (5-25 digits)');
+          return false;
+        }
+      }
+      return true;
+    }
+
+    return true;
+  };
+
+  const handleNextStep = () => {
+    if (!validateStep(step)) return;
+    setStep((prev) => Math.min(prev + 1, 5));
+  };
+
+  const handleGoToStep = (targetStep) => {
+    if (targetStep > step) {
+      for (let s = step; s < targetStep; s++) {
+        if (!validateStep(s)) {
+          setStep(s);
+          return;
+        }
+      }
+    }
+    setStep(targetStep);
+  };
+
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
     if (!isAuthenticated) {
       toast('Please login as Owner to proceed', { icon: '🔑' });
       await demoLogin('owner');
+    }
+
+    // Comprehensive validation across all steps before API dispatch
+    for (let s = 1; s <= 5; s++) {
+      if (!validateStep(s)) {
+        setStep(s);
+        return;
+      }
     }
 
     try {
@@ -363,12 +489,26 @@ const PostPropertyPage = () => {
       if (isEdit) {
         const res = await api.put(`/properties/${id}`, payload);
         if (res.data.success) {
+          trackEvent('post_property', {
+            action: 'update',
+            category: formData.category,
+            city: formData.city || 'Rajkot',
+            locality: formData.locality,
+            zero_brokerage: Number(formData.pricing?.brokerageAmount || 0) === 0,
+          });
           toast.success(isCommercial ? 'Commercial listing updated successfully!' : 'Property listing updated successfully!');
           navigate(`/property/${res.data.property?.slug || id}`);
         }
       } else {
         const res = await api.post('/properties', payload);
         if (res.data.success) {
+          trackEvent('post_property', {
+            action: 'create',
+            category: formData.category,
+            city: formData.city || 'Rajkot',
+            locality: formData.locality,
+            zero_brokerage: Number(formData.pricing?.brokerageAmount || 0) === 0,
+          });
           toast.success(isCommercial ? 'Commercial listing published successfully!' : 'Property posted successfully on RentNest!');
           navigate(`/property/${res.data.property.slug || res.data.property._id}`);
         }
@@ -420,8 +560,39 @@ const PostPropertyPage = () => {
     );
   }
 
+  if (user?.role === 'tenant') {
+    return (
+      <div className="max-w-md mx-auto my-16 p-8 bg-white rounded-3xl border border-slate-200 shadow-xl text-center space-y-6">
+        <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+          <Building2 className="w-7 h-7" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-xl font-black text-slate-900">Switch Role to Post Property</h2>
+          <p className="text-xs text-slate-500 font-medium leading-relaxed">
+            You are currently logged in with a <strong>Tenant (Home Seeker)</strong> account. Only verified Landlords and Brokers can list properties.
+          </p>
+        </div>
+        <div className="space-y-3 pt-2">
+          <button
+            onClick={() => updateUserRole('owner')}
+            className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 transition-all"
+          >
+            Switch to Direct Owner Mode
+          </button>
+          <button
+            onClick={() => updateUserRole('broker')}
+            className="w-full py-2.5 px-4 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs transition-all"
+          >
+            Switch to Broker Mode
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-3xl mx-auto px-4 py-10 space-y-8">
+      <Seo noIndex title={isEdit ? 'Edit Property Listing | RentNest' : 'Post Rental Property | RentNest'} />
       
       {/* Wizard Header */}
       <div className="text-center space-y-2">
@@ -453,13 +624,7 @@ const PostPropertyPage = () => {
             <div key={s} className="flex flex-col items-center z-10">
               <button
                 type="button"
-                onClick={() => {
-                  if (step === 1 && !formData.title && s > 1) {
-                    toast.error('Please enter a listing title');
-                    return;
-                  }
-                  setStep(s);
-                }}
+                onClick={() => handleGoToStep(s)}
                 className={`w-9 sm:w-10 h-9 sm:h-10 rounded-xl flex items-center justify-center font-bold text-xs transition-colors cursor-pointer ${
                   step >= s ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
                 }`}
@@ -803,6 +968,8 @@ const PostPropertyPage = () => {
                 <label className="block text-xs font-bold text-slate-700 mb-1">Monthly Rent (₹)</label>
                 <input
                   type="number"
+                  min="100"
+                  required
                   value={formData.pricing.monthlyRent}
                   onChange={(e) => handleNestedChange('pricing', 'monthlyRent', Number(e.target.value))}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-extrabold text-blue-600 focus:border-blue-600 outline-none"
@@ -813,6 +980,7 @@ const PostPropertyPage = () => {
                 <label className="block text-xs font-bold text-slate-700 mb-1">Security Deposit (₹)</label>
                 <input
                   type="number"
+                  min="0"
                   value={formData.pricing.securityDeposit}
                   onChange={(e) => handleNestedChange('pricing', 'securityDeposit', Number(e.target.value))}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 focus:border-blue-600 outline-none"
@@ -825,6 +993,7 @@ const PostPropertyPage = () => {
                 <label className="block text-xs font-bold text-slate-700 mb-1">Society Maintenance (₹/month)</label>
                 <input
                   type="number"
+                  min="0"
                   value={formData.pricing.maintenanceAmount}
                   onChange={(e) => handleNestedChange('pricing', 'maintenanceAmount', Number(e.target.value))}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-medium focus:border-blue-600 outline-none"
@@ -835,6 +1004,7 @@ const PostPropertyPage = () => {
                 <label className="block text-xs font-bold text-slate-700 mb-1">Brokerage Amount (₹)</label>
                 <input
                   type="number"
+                  min="0"
                   value={formData.pricing.brokerageAmount}
                   onChange={(e) => handleNestedChange('pricing', 'brokerageAmount', Number(e.target.value))}
                   placeholder="0 for direct owner"
@@ -1281,13 +1451,7 @@ const PostPropertyPage = () => {
           {step < 5 ? (
             <button
               type="button"
-              onClick={() => {
-                if (step === 1 && !formData.title) {
-                  toast.error('Please enter a listing title');
-                  return;
-                }
-                setStep(step + 1);
-              }}
+              onClick={handleNextStep}
               className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-md shadow-blue-500/20 transition-all"
             >
               <span>Next Step</span>
