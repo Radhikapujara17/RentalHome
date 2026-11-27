@@ -16,7 +16,9 @@ const savedSearchSchema = new mongoose.Schema({
     email: { type: Boolean, default: true },
     webPush: { type: Boolean, default: true }
   },
-  lastNotifiedListingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Property' }
+  lastNotifiedListingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Property' },
+  isDeleted: { type: Boolean, default: false, index: true },
+  deletedAt: Date
 }, { timestamps: true });
 
 module.exports = mongoose.model('SavedSearch', savedSearchSchema);

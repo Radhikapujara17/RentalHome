@@ -1,4 +1,5 @@
 const { Conversation, Message } = require('../models/Chat');
+const User = require('../models/User');
 
 // @desc    Get user conversations
 // @route   GET /api/v1/chat/conversations
@@ -8,7 +9,7 @@ exports.getConversations = async (req, res, next) => {
     const conversations = await Conversation.find({
       participants: req.user.id
     })
-      .populate('participants', 'name phone role avatar')
+      .populate('participants', 'name role avatar')
       .populate('property', 'title pricing photos locality')
       .sort({ lastMessageAt: -1 });
 
@@ -27,6 +28,17 @@ exports.getConversations = async (req, res, next) => {
 exports.getOrCreateConversation = async (req, res, next) => {
   try {
     const { recipientId, propertyId } = req.body;
+    if (!recipientId) {
+      return res.status(400).json({ success: false, message: 'Recipient ID is required' });
+    }
+    if (recipientId.toString() === req.user.id.toString()) {
+      return res.status(400).json({ success: false, message: 'Cannot start a conversation with yourself' });
+    }
+
+    const recipient = await User.findOne({ _id: recipientId, isDeleted: { $ne: true } }).select('_id');
+    if (!recipient) {
+      return res.status(404).json({ success: false, message: 'Recipient user not found' });
+    }
 
     let conversation = await Conversation.findOne({
       participants: { $all: [req.user.id, recipientId] },
@@ -43,7 +55,7 @@ exports.getOrCreateConversation = async (req, res, next) => {
     }
 
     const populated = await Conversation.findById(conversation._id)
-      .populate('participants', 'name phone role avatar')
+      .populate('participants', 'name role avatar')
       .populate('property', 'title pricing photos locality');
 
     res.status(200).json({
@@ -55,11 +67,23 @@ exports.getOrCreateConversation = async (req, res, next) => {
   }
 };
 
-// @desc    Get messages for a conversation
+// @desc    Get messages for a conversation (participants only)
 // @route   GET /api/v1/chat/conversations/:id/messages
 // @access  Private
 exports.getMessages = async (req, res, next) => {
   try {
+    const conversation = await Conversation.findById(req.params.id);
+    if (!conversation) {
+      return res.status(404).json({ success: false, message: 'Conversation not found' });
+    }
+
+    const isParticipant = conversation.participants.some(
+      (p) => p.toString() === req.user.id.toString()
+    );
+    if (!isParticipant && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Not authorized to view this conversation' });
+    }
+
     const messages = await Message.find({ conversation: req.params.id })
       .populate('sender', 'name avatar')
       .sort({ createdAt: 1 });
@@ -73,7 +97,7 @@ exports.getMessages = async (req, res, next) => {
   }
 };
 
-// @desc    Send a message
+// @desc    Send a message (participants only)
 // @route   POST /api/v1/chat/messages
 // @access  Private
 exports.sendMessage = async (req, res, next) => {
@@ -88,15 +112,28 @@ exports.sendMessage = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Message cannot exceed 1000 characters' });
     }
 
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      return res.status(404).json({ success: false, message: 'Conversation not found' });
+    }
+
+    const isParticipant = conversation.participants.some(
+      (p) => p.toString() === req.user.id.toString()
+    );
+    if (!isParticipant) {
+      return res.status(403).json({ success: false, message: 'Not authorized to send messages in this conversation' });
+    }
+
+    const trimmed = text.trim();
     const message = await Message.create({
       conversation: conversationId,
       sender: req.user.id,
-      text: text.trim()
+      text: trimmed
     });
 
     // Update conversation lastMessage
     await Conversation.findByIdAndUpdate(conversationId, {
-      lastMessage: text,
+      lastMessage: trimmed,
       lastMessageAt: new Date()
     });
 

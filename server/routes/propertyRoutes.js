@@ -15,16 +15,16 @@ const {
 } = require('../controllers/propertyController');
 const { protect, authorize } = require('../middleware/auth');
 
-router.get('/', getProperties);
-router.get('/analytics/localities', getLocalityStats);
+router.get('/', protect, getProperties);
+router.get('/analytics/localities', protect, getLocalityStats);
 router.get('/my/listings', protect, getMyProperties);
 router.get('/my/saved', protect, getSavedProperties);
 
 router.post('/:id/save', protect, toggleSaveProperty);
 router.post('/:id/verify-document', protect, verifyPropertyDocument);
-router.post('/:id/report', reportProperty);
+router.post('/:id/report', protect, reportProperty);
 
-router.get('/:idOrSlug', getProperty);
+router.get('/:idOrSlug', protect, getProperty);
 
 router.post('/', protect, authorize('owner', 'broker', 'admin'), createProperty);
 router.put('/:id', protect, authorize('owner', 'broker', 'admin'), updateProperty);

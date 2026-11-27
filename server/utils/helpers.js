@@ -109,8 +109,47 @@ function validatePassword(password) {
   return { isValid: true, error: null };
 }
 
+/**
+ * Resolve JWT signing secret safely.
+ * Fails loudly in production if JWT_SECRET is not configured.
+ */
+function getJwtSecret() {
+  if (process.env.JWT_SECRET && process.env.JWT_SECRET.trim()) {
+    return process.env.JWT_SECRET.trim();
+  }
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('FATAL: JWT_SECRET environment variable must be set in production.');
+  }
+  return process.env.DEV_JWT_SECRET || 'rentnest_local_dev_only_secret_key';
+}
+
+/**
+ * Escape user input before building MongoDB $regex queries to prevent ReDoS.
+ */
+function escapeRegex(str = '') {
+  return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Strip sensitive internal/PII fields from User documents before sending to clients.
+ */
+function sanitizeUser(userDoc, { includeKycUrl = false } = {}) {
+  if (!userDoc) return null;
+  const obj = typeof userDoc.toObject === 'function' ? userDoc.toObject() : { ...userDoc };
+  delete obj.password;
+  delete obj.otpCode;
+  delete obj.otpExpiresAt;
+  if (!includeKycUrl) {
+    delete obj.kycDocumentUrl;
+  }
+  return obj;
+}
+
 module.exports = {
   verifyNameMatch,
   normalizeAndValidatePhone,
-  validatePassword
+  validatePassword,
+  getJwtSecret,
+  escapeRegex,
+  sanitizeUser
 };

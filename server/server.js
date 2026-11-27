@@ -2,12 +2,20 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const helmet = require('helmet');
+const cookieParser = require('cookie-parser');
+const mongoSanitize = require('express-mongo-sanitize');
+const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
 const path = require('path');
 
 // Load environment variables
 dotenv.config();
+
+// Validate JWT secret requirement early
+const { getJwtSecret } = require('./utils/helpers');
+getJwtSecret();
 
 // Connect to MongoDB
 const connectDB = require('./config/db');
@@ -44,18 +52,25 @@ const server = http.createServer(app);
 app.set('etag', false);
 app.disable('etag');
 
-// Flexible CORS for Docker, Nginx proxy, local dev & staging
+// Strict CORS allowlist for Docker, Nginx proxy, local dev & configured CLIENT_URL
+const allowedOrigins = new Set(
+  [process.env.CLIENT_URL]
+    .filter(Boolean)
+    .map((u) => u.trim().replace(/\/+$/, ''))
+);
+
 const corsOptions = {
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
-    if (
-      /^http:\/\/localhost(:\d+)?$/.test(origin) ||
-      /^http:\/\/127\.0\.0\.1(:\d+)?$/.test(origin) ||
-      origin === process.env.CLIENT_URL
-    ) {
+    const normalized = origin.trim().replace(/\/+$/, '');
+    const isDevLocal =
+      process.env.NODE_ENV !== 'production' &&
+      (/^http:\/\/localhost(:\d+)?$/.test(normalized) ||
+        /^http:\/\/127\.0\.0\.1(:\d+)?$/.test(normalized));
+    if (isDevLocal || allowedOrigins.has(normalized)) {
       return callback(null, true);
     }
-    return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
   },
   credentials: true
 };
@@ -69,10 +84,28 @@ const io = new Server(server, {
 const chatSocket = require('./sockets/chatSocket');
 chatSocket(io);
 
-// Middleware
+// Security & Core Middleware
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
 app.use(cors(corsOptions));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(mongoSanitize());
+
+// Rate limiters for auth & anti-abuse endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === 'production' ? 25 : 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many authentication attempts. Please try again later.' }
+});
+app.use('/api/v1/auth/login', authLimiter);
+app.use('/api/v1/auth/register', authLimiter);
+app.use('/api/v1/auth/send-otp', authLimiter);
+app.use('/api/v1/auth/verify-otp', authLimiter);
 
 // Prevent browser/proxy caching on API routes (resolves 304 Not Modified and stale role/user data)
 app.use('/api', (req, res, next) => {
@@ -89,8 +122,13 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
-// Serve uploaded property photos locally
-app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
+// Serve uploaded property photos locally with nosniff header
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads'), {
+  setHeaders: (res) => {
+    res.set('X-Content-Type-Options', 'nosniff');
+    res.set('Content-Disposition', 'inline');
+  }
+}));
 
 if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'));

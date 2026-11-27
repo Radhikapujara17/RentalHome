@@ -5,9 +5,9 @@ import { Home, ShieldCheck, Heart, MapPin, Zap, Droplets, CheckCircle2 } from 'l
 const Footer = () => {
   return (
     <footer className="bg-slate-900 text-slate-300 pt-16 pb-12 border-t border-slate-800 print:hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10 pb-12 border-b border-slate-800">
-          
+
           {/* Brand & Mission */}
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
@@ -83,6 +83,8 @@ const Footer = () => {
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 space-y-4 sm:space-y-0">
           <p>© 2026 RentNest Technologies. Crafted for Gujarat's fastest-growing urban rental markets.</p>
           <div className="flex items-center space-x-4">
+            <Link to="/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</Link>
+            <Link to="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
             <span className="flex items-center space-x-1">
               <span>Made with</span>
               <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />

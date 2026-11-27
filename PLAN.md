@@ -36,6 +36,7 @@
 10. [Local Development, Deployment & CI/CD Guide](#10-local-development-deployment--cicd-guide)
 11. [Required Subscriptions, API Keys & Environment Secrets Checklist](#11-required-subscriptions-api-keys--environment-secrets-checklist)
 12. [Master Technical Architecture for All Strategic Suggestions](#12-master-technical-architecture-for-all-strategic-suggestions)
+13. [Security Hardening & User Privacy Action Plan](#13-security-hardening--user-privacy-action-plan)
 
 ---
 
@@ -1558,6 +1559,126 @@ This section details the end-to-end technical specifications, database schemas, 
   - Manifest: [`client/public/manifest.json`](file:///C:/Users/Radhika/OneDrive/Desktop/Mern/RentalHome/RentalHome/client/public/manifest.json) configured with standalone display, orientation lock, and brand icons.
   - Custom In-App Install Banner: Listens to the `beforeinstallprompt` event and prompts mobile users to "Add RentNest to Home Screen" with 1 click.
   - Service Worker: Caches static CSS, JS chunks, and Leaflet map tiles for offline resilience.
+
+---
+
+## 13. Security Hardening & User Privacy Action Plan
+
+This section explains every security and privacy issue found in the current codebase in plain language—**why** each one is risky and **how** to fix it step by step before launching to real users.
+
+---
+
+### 13.1 Critical Fixes (Must Fix Before Launch)
+
+1. **Disable Demo Login & Fixed Dev OTP in Production + Require Real JWT Secret**
+   - **Why**: Right now, `POST /api/v1/auth/demo-login` lets anyone on the internet log in as an **Admin**, **Owner**, **Broker**, or **Tenant** with zero password. Also, `USE_DEV_OTP=true` accepts `123456` for any phone number, and if `JWT_SECRET` is missing, the app falls back to a hardcoded secret string in code—meaning an attacker could forge login tokens.
+   - **How**:
+     - In [`server/controllers/authController.js`](file:///C:/Users/Radhika/OneDrive/Desktop/Mern/RentalHome/RentalHome/server/controllers/authController.js), return `403` from `demoLogin` unless `process.env.NODE_ENV !== 'production' && process.env.ENABLE_DEMO_MODE === 'true'`.
+     - Only allow the `123456` OTP shortcut when `NODE_ENV !== 'production'` and `USE_DEV_OTP === 'true'`.
+     - In [`server/middleware/auth.js`](file:///C:/Users/Radhika/OneDrive/Desktop/Mern/RentalHome/RentalHome/server/middleware/auth.js) and [`authController.js`](file:///C:/Users/Radhika/OneDrive/Desktop/Mern/RentalHome/RentalHome/server/controllers/authController.js), remove the hardcoded fallback JWT secret and throw an error on server startup if `process.env.JWT_SECRET` is missing in production.
+
+2. **Block Password Takeover on OTP / Demo Accounts**
+   - **Why**: In `login`, if a user originally signed up with Phone OTP (so they have no password saved yet), typing *any* 6-character password logs them in and saves that new password onto their account. Anyone who knows their phone number or email can hijack their account.
+   - **How**:
+     - In `exports.login` ([`server/controllers/authController.js`](file:///C:/Users/Radhika/OneDrive/Desktop/Mern/RentalHome/RentalHome/server/controllers/authController.js)), if `!user.password`, immediately return `401` (`"This account uses OTP login. Please sign in with OTP or set a password after verifying OTP."`) instead of saving `req.body.password`.
+
+3. **Protect Private Chat Messages & Live Socket.io Rooms**
+   - **Why**: Currently, any logged-in user who knows or guesses a `conversationId` can read all private messages (`GET /api/v1/chat/conversations/:id/messages`) or send fake messages into someone else's chat (`POST /api/v1/chat/messages`), and anyone can join any Socket.io chat room without logging in.
+   - **How**:
+     - In [`server/controllers/chatController.js`](file:///C:/Users/Radhika/OneDrive/Desktop/Mern/RentalHome/RentalHome/server/controllers/chatController.js), fetch the `Conversation` by ID first and check that `conversation.participants.some(p => p.toString() === req.user.id)` before returning or saving messages (otherwise return `403`).
+     - In [`server/sockets/chatSocket.js`](file:///C:/Users/Radhika/OneDrive/Desktop/Mern/RentalHome/RentalHome/server/sockets/chatSocket.js), add an `io.use(...)` middleware to verify the user's JWT from `socket.handshake.auth.token`, and inside `joinConversation` check that `socket.userId` is a participant in that conversation before calling `socket.join(...)`.
+
+4. **Restrict Who Can Approve or Reschedule Visit Passes**
+   - **Why**: In `PUT /api/v1/visits/:id`, both the tenant and the owner are allowed to update `status` and `ownerCounterDate`. A tenant could mark their own visit request as `accepted` or `completed` without the landlord's permission.
+   - **How**:
+     - In [`server/controllers/visitController.js`](file:///C:/Users/Radhika/OneDrive/Desktop/Mern/RentalHome/RentalHome/server/controllers/visitController.js), allow only the property `owner` (or `admin`) to set `accepted`, `declined`, `completed`, `ownerCounterDate`, or `ownerCounterSlot`, and allow the `tenant` to only set `status = 'cancelled'`.
+
+---
+
+### 13.2 High-Priority Security & Privacy Fixes
+
+5. **Hide Landlord Utility Bills & Private User Fields from Other Users**
+   - **Why**: Property API responses currently include `ownershipDocumentUrl` (uploaded electricity bill or tax receipt) and `verifiedDocumentDetails.consumerNumber` / `consumerName`. Other users browsing listings should see that a property is verified, **not** the owner's private bill document or PGVCL consumer number. User endpoints (`getMe`, `submitKyc`, `reviewKyc`) also return `otpCode` / `otpExpiresAt` fields.
+   - **How**:
+     - In [`server/controllers/propertyController.js`](file:///C:/Users/Radhika/OneDrive/Desktop/Mern/RentalHome/RentalHome/server/controllers/propertyController.js), exclude `ownershipDocumentUrl`, `verifiedDocumentDetails.consumerNumber`, and `verifiedDocumentDetails.consumerName` from `getProperties` and `getProperty` responses (keep only `isVerifiedOwner`, `ownershipDocumentVerified`, and `verifiedDocumentDetails.verificationNote`), returning full document URLs only in `getMyProperties` or admin routes.
+     - In [`server/models/User.js`](file:///C:/Users/Radhika/OneDrive/Desktop/Mern/RentalHome/RentalHome/server/models/User.js), mark `otpCode`, `otpExpiresAt`, and `kycDocumentUrl` with `select: false` (or use a clean `sanitizeUser(user)` helper in `authController.js`).
+
+6. **Respect Owner Contact Preferences (`contactPreference`)**
+   - **Why**: Owners can choose `verified_only` or `whatsapp_only` in their profile, but property APIs currently send `owner.phone` to every logged-in user regardless of that setting.
+   - **How**:
+     - In [`propertyController.js`](file:///C:/Users/Radhika/OneDrive/Desktop/Mern/RentalHome/RentalHome/server/controllers/propertyController.js), check `property.owner.contactPreference`: if `'verified_only'` and `req.user.verificationStatus !== 'verified'` (and caller is not the owner/admin), omit `owner.phone` so tenants connect through in-app chat or verify first.
+
+7. **Lock Down CORS to Allowed Frontend Domains Only**
+   - **Why**: In [`server/server.js`](file:///C:/Users/Radhika/OneDrive/Desktop/Mern/RentalHome/RentalHome/server/server.js), `corsOptions.origin` currently ends with `return callback(null, true);`, which lets any unknown third-party website make API calls to your backend.
+   - **How**:
+     - Build an allowlist from `process.env.CLIENT_URL` (plus `localhost`/`127.0.0.1` only when `NODE_ENV !== 'production'`), and return `callback(new Error('Not allowed by CORS'))` for any other origin.
+
+8. **Require Login & Strict File Checks on Uploads**
+   - **Why**: `POST /api/v1/tools/upload-image` is currently open without login and accepts any file extension (`.html`, `.svg`, `.js`, etc.), which is stored publicly under `/uploads`. Malicious scripts uploaded as `.html` or `.svg` can cause XSS attacks on your domain.
+   - **How**:
+     - Add `protect` middleware to `/upload-image` in [`server/routes/toolsRoutes.js`](file:///C:/Users/Radhika/OneDrive/Desktop/Mern/RentalHome/RentalHome/server/routes/toolsRoutes.js).
+     - In [`server/controllers/toolsController.js`](file:///C:/Users/Radhika/OneDrive/Desktop/Mern/RentalHome/RentalHome/server/controllers/toolsController.js), allow only safe image MIME types (`image/jpeg`, `image/png`, `image/webp`) and map MIME type to a fixed safe extension instead of trusting `originalname`.
+     - Serve `/uploads` in [`server/server.js`](file:///C:/Users/Radhika/OneDrive/Desktop/Mern/RentalHome/RentalHome/server/server.js) with `X-Content-Type-Options: nosniff`, and store sensitive KYC bills in private authenticated storage rather than public `/uploads`.
+
+9. **Protect "Report Listing" Against Fake Spam Reports**
+   - **Why**: Anyone without logging in can hit `POST /api/v1/properties/:id/report` 3 times in a row and automatically quarantine (`hide`) a genuine landlord's listing.
+   - **How**:
+     - Require `protect` on `/properties/:id/report` in [`server/routes/propertyRoutes.js`](file:///C:/Users/Radhika/OneDrive/Desktop/Mern/RentalHome/RentalHome/server/routes/propertyRoutes.js).
+     - Store `reportedBy: [ObjectId]` on `Property` so each user can report a listing only once, and notify Admin instead of letting 3 unverified hits permanently hide listings without review.
+
+---
+
+### 13.3 Medium-Priority Hardening
+
+10. **Prevent Field Tampering (Mass Assignment) & Slow Regex Searches**
+    - **Why**: Passing `req.body` straight into `Property.create(req.body)` or `findByIdAndUpdate(..., req.body)` lets an attacker send extra fields like `viewCount: 99999` or `status: 'active'` on a quarantined listing. Also, passing raw user input into MongoDB `$regex` can slow down the database with tricky patterns (ReDoS).
+    - **How**:
+      - Pick only allowed fields explicitly (`pickAllowedFields`) in `createProperty` and `updateProperty`.
+      - Escape special regex characters (`search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')`) before `$regex` in [`propertyController.js`](file:///C:/Users/Radhika/OneDrive/Desktop/Mern/RentalHome/RentalHome/server/controllers/propertyController.js).
+
+11. **Add Security Headers, Rate Limiting & NoSQL Input Sanitization**
+    - **Why**: Without rate limits, attackers can spam OTP requests or guess passwords thousands of times per minute. Without `helmet` and query sanitization, browsers miss security protections and MongoDB queries can be tricked with `$gt`/`$ne` operators.
+    - **How**:
+      - Install `helmet`, `express-rate-limit`, and `express-mongo-sanitize` in `server/package.json` and register them in [`server/server.js`](file:///C:/Users/Radhika/OneDrive/Desktop/Mern/RentalHome/RentalHome/server/server.js).
+      - Add strict rate limits (e.g., max 5–10 requests per 15 mins) on `/api/v1/auth/login`, `/send-otp`, `/verify-otp`, and `/register`.
+
+12. **Verify Phone Changes via OTP & Hide Internal Server Errors**
+    - **Why**: Users can currently change their phone number in `PUT /api/v1/auth/profile` without proving they own the new number, and [`server/middleware/errorHandler.js`](file:///C:/Users/Radhika/OneDrive/Desktop/Mern/RentalHome/RentalHome/server/middleware/errorHandler.js) returns raw `error.message` on `500` errors.
+    - **How**:
+      - Require an OTP check before updating `user.phone` in `updateProfile`.
+      - Return `'Internal Server Error'` for `500` responses when `NODE_ENV === 'production'`.
+
+13. **Upgrade Token Storage from `localStorage` to `HttpOnly` Cookies (Recommended)**
+    - **Why**: Storing `rentnest_token` in `localStorage` ([`client/src/context/AuthContext.jsx`](file:///C:/Users/Radhika/OneDrive/Desktop/Mern/RentalHome/RentalHome/client/src/context/AuthContext.jsx)) means any JavaScript XSS bug could read the user's token. An `HttpOnly; Secure; SameSite=Lax` cookie cannot be read by JavaScript.
+    - **How**:
+      - Have `/auth/login`, `/auth/verify-otp`, and `/auth/register` set an `HttpOnly` cookie, read `req.cookies.token` in [`server/middleware/auth.js`](file:///C:/Users/Radhika/OneDrive/Desktop/Mern/RentalHome/RentalHome/server/middleware/auth.js), enable `withCredentials: true` in [`client/src/api/client.js`](file:///C:/Users/Radhika/OneDrive/Desktop/Mern/RentalHome/RentalHome/client/src/api/client.js), and clear the cookie on `/auth/logout`.
+
+---
+
+### 13.4 Privacy & Legal Compliance (India DPDP Act 2023)
+
+14. **Privacy Policy, Terms & Analytics Consent Banner**
+    - **Why**: The app collects personal data (phone numbers, addresses, chat messages, and electricity bills) and runs Google Analytics (`G-LLWCM48NRV`). Users need clear notice and consent before tracking starts, plus visible Privacy Policy and Terms pages.
+    - **How**:
+      - Add `/privacy-policy` and `/terms` pages in `client/src/pages/` linked from [`Footer.jsx`](file:///C:/Users/Radhika/OneDrive/Desktop/Mern/RentalHome/RentalHome/client/src/components/Footer.jsx) and [`AuthPage.jsx`](file:///C:/Users/Radhika/OneDrive/Desktop/Mern/RentalHome/RentalHome/client/src/pages/AuthPage.jsx).
+      - Add a lightweight cookie/analytics consent banner that enables `gtag('consent', 'update', ...)` only after acceptance (or keeps essential-only mode on decline).
+
+15. **Self-Service Account Deletion & KYC Bill Purge Policy**
+    - **Why**: Under modern privacy rules (including India's DPDP Act 2023), users have the right to delete their data, and keeping raw utility bill photos indefinitely increases breach impact.
+    - **How**:
+      - Add `DELETE /api/v1/auth/me` so users can delete/anonymize their account, saved searches, and active listings.
+      - Automatically delete or mask raw `kycDocumentUrl` images after verification is approved/rejected, keeping only the verified status and audit timestamp.
+
+---
+
+### 13.5 Recommended Implementation Order
+
+| Phase | Items | Goal |
+|---|---|---|
+| **Phase A (Immediate)** | #1, #2, #3, #4, #7 | Stop unauthorized access, account hijacking, admin demo bypass, and chat/visit tampering |
+| **Phase B (Privacy & Abuse)** | #5, #6, #8, #9 | Protect KYC bills, phone privacy, file uploads, and anti-scam report integrity |
+| **Phase C (Hardening)** | #10, #11, #12, #13 | Add `helmet`, rate limiting, input sanitization, and safer token handling |
+| **Phase D (Compliance)** | #14, #15 | Publish Privacy Policy, consent banner, and user account deletion |
 
 ---
 

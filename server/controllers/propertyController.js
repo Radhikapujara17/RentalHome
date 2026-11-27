@@ -1,10 +1,82 @@
 const Property = require('../models/Property');
 const User = require('../models/User');
-const { verifyNameMatch } = require('../utils/helpers');
+const { verifyNameMatch, escapeRegex } = require('../utils/helpers');
+
+const ALLOWED_PROPERTY_FIELDS = [
+  'title',
+  'category',
+  'propertyType',
+  'bhk',
+  'carpetAreaSqFt',
+  'floorNumber',
+  'totalFloors',
+  'facing',
+  'commercialDetails',
+  'city',
+  'locality',
+  'societyName',
+  'fullAddress',
+  'landmark',
+  'distanceToKeyLandmarks',
+  'coordinates',
+  'pricing',
+  'utilities',
+  'rules',
+  'furnishingStatus',
+  'furnishingItems',
+  'amenities',
+  'photos',
+  'videoTourUrl',
+  'ownershipDocumentUrl',
+  'ownershipDocumentType'
+];
+
+const pickPropertyFields = (body = {}) => {
+  const picked = {};
+  ALLOWED_PROPERTY_FIELDS.forEach((field) => {
+    if (body[field] !== undefined) {
+      picked[field] = body[field];
+    }
+  });
+  return picked;
+};
+
+const sanitizePropertyForViewer = (propDoc, reqUser) => {
+  if (!propDoc) return null;
+  const obj = typeof propDoc.toObject === 'function' ? propDoc.toObject() : { ...propDoc };
+  const viewerId = reqUser?._id?.toString() || reqUser?.id?.toString();
+  const ownerId = obj.owner?._id?.toString() || obj.owner?.toString();
+  const isOwnerOrAdmin = Boolean(viewerId && (viewerId === ownerId || reqUser?.role === 'admin'));
+
+  delete obj.reportedBy;
+
+  if (!isOwnerOrAdmin) {
+    delete obj.ownershipDocumentUrl;
+    if (obj.verifiedDocumentDetails) {
+      obj.verifiedDocumentDetails = {
+        discomProvider: obj.verifiedDocumentDetails.discomProvider,
+        verifiedAt: obj.verifiedDocumentDetails.verifiedAt,
+        autoVerified: obj.verifiedDocumentDetails.autoVerified,
+        verificationNote: obj.verifiedDocumentDetails.verificationNote
+      };
+    }
+    if (
+      obj.owner &&
+      typeof obj.owner === 'object' &&
+      obj.owner.contactPreference === 'verified_only' &&
+      reqUser?.verificationStatus !== 'verified'
+    ) {
+      delete obj.owner.phone;
+      obj.owner.phoneHidden = true;
+    }
+  }
+
+  return obj;
+};
 
 // @desc    Get All Properties with Deep Filters & Map Coordinates
 // @route   GET /api/v1/properties
-// @access  Public
+// @access  Private
 exports.getProperties = async (req, res, next) => {
   try {
     const {
@@ -32,7 +104,7 @@ exports.getProperties = async (req, res, next) => {
       search
     } = req.query;
 
-    const query = { status: 'active', isQuarantined: { $ne: true } };
+    const query = { status: 'active', isQuarantined: { $ne: true }, isDeleted: { $ne: true } };
     const andConditions = [];
 
     // Dynamic Multi-City Filter (treat legacy docs missing city as default 'Rajkot')
@@ -87,16 +159,19 @@ exports.getProperties = async (req, res, next) => {
       query['commercialDetails.electricPhaseType'] = electricPhaseType;
     }
 
-    // Search keyword in title, societyName, locality, or fullAddress
+    // Search keyword in title, societyName, locality, or fullAddress (escaped to prevent ReDoS)
     if (search) {
-      andConditions.push({
-        $or: [
-          { title: { $regex: search, $options: 'i' } },
-          { societyName: { $regex: search, $options: 'i' } },
-          { locality: { $regex: search, $options: 'i' } },
-          { fullAddress: { $regex: search, $options: 'i' } }
-        ]
-      });
+      const safeSearch = escapeRegex(search.trim());
+      if (safeSearch) {
+        andConditions.push({
+          $or: [
+            { title: { $regex: safeSearch, $options: 'i' } },
+            { societyName: { $regex: safeSearch, $options: 'i' } },
+            { locality: { $regex: safeSearch, $options: 'i' } },
+            { fullAddress: { $regex: safeSearch, $options: 'i' } }
+          ]
+        });
+      }
     }
 
     if (andConditions.length > 0) {
@@ -159,22 +234,24 @@ exports.getProperties = async (req, res, next) => {
     else if (sort === 'popular') sortOption = { viewCount: -1 };
     else if (sort === 'verified') sortOption = { isVerifiedOwner: -1, createdAt: -1 };
 
-    const skip = (Number(page) - 1) * Number(limit);
+    const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
+    const safePage = Math.max(Number(page) || 1, 1);
+    const skip = (safePage - 1) * safeLimit;
     const total = await Property.countDocuments(query);
 
     const properties = await Property.find(query)
       .populate('owner', 'name phone role avatar verificationStatus contactPreference brokerDetails')
       .sort(sortOption)
       .skip(skip)
-      .limit(Number(limit));
+      .limit(safeLimit);
 
     res.status(200).json({
       success: true,
       count: properties.length,
       total,
-      totalPages: Math.ceil(total / Number(limit)),
-      currentPage: Number(page),
-      properties
+      totalPages: Math.ceil(total / safeLimit),
+      currentPage: safePage,
+      properties: properties.map((p) => sanitizePropertyForViewer(p, req.user))
     });
   } catch (error) {
     next(error);
@@ -183,7 +260,7 @@ exports.getProperties = async (req, res, next) => {
 
 // @desc    Get Single Property by ID or Slug
 // @route   GET /api/v1/properties/:idOrSlug
-// @access  Public
+// @access  Private
 exports.getProperty = async (req, res, next) => {
   try {
     const { idOrSlug } = req.params;
@@ -191,12 +268,12 @@ exports.getProperty = async (req, res, next) => {
 
     // Check if valid ObjectId or Slug
     if (idOrSlug.match(/^[0-9a-fA-F]{24}$/)) {
-      property = await Property.findById(idOrSlug).populate(
+      property = await Property.findOne({ _id: idOrSlug, isDeleted: { $ne: true } }).populate(
         'owner',
         'name phone role avatar verificationStatus contactPreference brokerDetails'
       );
     } else {
-      property = await Property.findOne({ slug: idOrSlug }).populate(
+      property = await Property.findOne({ slug: idOrSlug, isDeleted: { $ne: true } }).populate(
         'owner',
         'name phone role avatar verificationStatus contactPreference brokerDetails'
       );
@@ -206,12 +283,18 @@ exports.getProperty = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Property listing not found' });
     }
 
+    const viewerId = req.user?._id?.toString() || req.user?.id?.toString();
+    const ownerId = property.owner?._id?.toString() || property.owner?.toString();
+    if (property.isQuarantined && viewerId !== ownerId && req.user?.role !== 'admin') {
+      return res.status(404).json({ success: false, message: 'Property listing is currently unavailable' });
+    }
+
     // Increment view count asynchronously
     Property.findByIdAndUpdate(property._id, { $inc: { viewCount: 1 } }).exec();
 
     res.status(200).json({
       success: true,
-      property
+      property: sanitizePropertyForViewer(property, req.user)
     });
   } catch (error) {
     next(error);
@@ -223,9 +306,10 @@ exports.getProperty = async (req, res, next) => {
 // @access  Private (Owner / Broker / Admin)
 exports.createProperty = async (req, res, next) => {
   try {
-    req.body.owner = req.user.id;
+    const safeBody = pickPropertyFields(req.body);
+    safeBody.owner = req.user.id;
 
-    const { title, locality, societyName, fullAddress, pricing, carpetAreaSqFt } = req.body;
+    const { title, locality, societyName, fullAddress, pricing, carpetAreaSqFt } = safeBody;
 
     // Strict input validation
     if (!title || typeof title !== 'string' || title.trim().length < 5) {
@@ -251,12 +335,12 @@ exports.createProperty = async (req, res, next) => {
     }
 
     // Ownership Document Verification on Server Side
-    if (req.body.ownershipDocumentUrl) {
+    if (safeBody.ownershipDocumentUrl) {
       const { isMatch, confidence } = verifyNameMatch(req.user.name, req.body.consumerName || req.user.name);
       if (isMatch) {
-        req.body.ownershipDocumentVerified = true;
-        req.body.isVerifiedOwner = true;
-        req.body.verifiedDocumentDetails = {
+        safeBody.ownershipDocumentVerified = true;
+        safeBody.isVerifiedOwner = true;
+        safeBody.verifiedDocumentDetails = {
           consumerName: req.body.consumerName || req.user.name,
           consumerNumber: req.body.consumerNumber || 'PGVCL-' + Math.floor(10000000000 + Math.random() * 90000000000),
           discomProvider: req.body.discomProvider || 'PGVCL',
@@ -266,9 +350,9 @@ exports.createProperty = async (req, res, next) => {
           verificationNote: `100% Genuine: Document name matched with registered landlord (${req.user.name}) with ${confidence}% confidence.`
         };
       } else {
-        req.body.ownershipDocumentVerified = false;
-        req.body.isVerifiedOwner = false;
-        req.body.verifiedDocumentDetails = {
+        safeBody.ownershipDocumentVerified = false;
+        safeBody.isVerifiedOwner = false;
+        safeBody.verifiedDocumentDetails = {
           consumerName: req.body.consumerName || 'Unknown',
           matchConfidence: confidence,
           verifiedAt: new Date(),
@@ -277,20 +361,20 @@ exports.createProperty = async (req, res, next) => {
         };
       }
     } else if (req.user.verificationStatus === 'verified') {
-      req.body.isVerifiedOwner = true;
+      safeBody.isVerifiedOwner = true;
     } else {
-      req.body.isVerifiedOwner = false;
+      safeBody.isVerifiedOwner = false;
     }
 
     // If user role is owner, check if brokerage is 0
     if (req.user.role === 'owner') {
-      req.body.pricing = req.body.pricing || {};
-      req.body.pricing.brokerageAmount = 0;
+      safeBody.pricing = safeBody.pricing || {};
+      safeBody.pricing.brokerageAmount = 0;
     }
 
     // Default photos if none provided
-    if (!req.body.photos || req.body.photos.length === 0) {
-      req.body.photos = [
+    if (!safeBody.photos || safeBody.photos.length === 0) {
+      safeBody.photos = [
         {
           url: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1000&q=80',
           roomTag: 'Living Room',
@@ -304,7 +388,7 @@ exports.createProperty = async (req, res, next) => {
       ];
     }
 
-    const property = await Property.create(req.body);
+    const property = await Property.create(safeBody);
 
     res.status(201).json({
       success: true,
@@ -320,7 +404,7 @@ exports.createProperty = async (req, res, next) => {
 // @access  Private (Owner of listing / Admin)
 exports.updateProperty = async (req, res, next) => {
   try {
-    let property = await Property.findById(req.params.id);
+    let property = await Property.findOne({ _id: req.params.id, isDeleted: { $ne: true } });
 
     if (!property) {
       return res.status(404).json({ success: false, message: 'Property not found' });
@@ -331,18 +415,18 @@ exports.updateProperty = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized to modify this listing' });
     }
 
-    // Protect immutable system fields
-    delete req.body.owner;
-    delete req.body._id;
-    delete req.body.listingNumber;
+    const safeUpdate = pickPropertyFields(req.body);
+    if (req.body.status && ['active', 'rented', 'unlisted'].includes(req.body.status) && !property.isQuarantined) {
+      safeUpdate.status = req.body.status;
+    }
 
     // Ownership Document Verification on Update
-    if (req.body.ownershipDocumentUrl) {
+    if (safeUpdate.ownershipDocumentUrl) {
       const { isMatch, confidence } = verifyNameMatch(req.user.name, req.body.consumerName || req.user.name);
       if (isMatch) {
-        req.body.ownershipDocumentVerified = true;
-        req.body.isVerifiedOwner = true;
-        req.body.verifiedDocumentDetails = {
+        safeUpdate.ownershipDocumentVerified = true;
+        safeUpdate.isVerifiedOwner = true;
+        safeUpdate.verifiedDocumentDetails = {
           consumerName: req.body.consumerName || req.user.name,
           consumerNumber: req.body.consumerNumber || property.verifiedDocumentDetails?.consumerNumber || 'PGVCL-88765432101',
           discomProvider: req.body.discomProvider || 'PGVCL',
@@ -352,9 +436,9 @@ exports.updateProperty = async (req, res, next) => {
           verificationNote: `100% Genuine: Document name matched with registered landlord (${req.user.name}) with ${confidence}% confidence.`
         };
       } else {
-        req.body.ownershipDocumentVerified = false;
-        req.body.isVerifiedOwner = false;
-        req.body.verifiedDocumentDetails = {
+        safeUpdate.ownershipDocumentVerified = false;
+        safeUpdate.isVerifiedOwner = false;
+        safeUpdate.verifiedDocumentDetails = {
           consumerName: req.body.consumerName || 'Unknown',
           matchConfidence: confidence,
           verifiedAt: new Date(),
@@ -364,7 +448,7 @@ exports.updateProperty = async (req, res, next) => {
       }
     }
 
-    property = await Property.findByIdAndUpdate(req.params.id, req.body, {
+    property = await Property.findByIdAndUpdate(req.params.id, safeUpdate, {
       new: true,
       runValidators: true
     });
@@ -378,12 +462,12 @@ exports.updateProperty = async (req, res, next) => {
   }
 };
 
-// @desc    Delete Property
+// @desc    Soft Delete Property
 // @route   DELETE /api/v1/properties/:id
 // @access  Private (Owner / Admin)
 exports.deleteProperty = async (req, res, next) => {
   try {
-    const property = await Property.findById(req.params.id);
+    const property = await Property.findOne({ _id: req.params.id, isDeleted: { $ne: true } });
 
     if (!property) {
       return res.status(404).json({ success: false, message: 'Property not found' });
@@ -393,11 +477,15 @@ exports.deleteProperty = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized to delete this listing' });
     }
 
-    await Property.findByIdAndDelete(req.params.id);
+    property.isDeleted = true;
+    property.deletedAt = new Date();
+    property.deletedBy = req.user.id;
+    property.status = 'unlisted';
+    await property.save();
 
     res.status(200).json({
       success: true,
-      message: 'Property successfully removed'
+      message: 'Property successfully removed (soft deleted)'
     });
   } catch (error) {
     next(error);
@@ -425,7 +513,7 @@ exports.getMyProperties = async (req, res, next) => {
       });
     }
 
-    const properties = await Property.find({ owner: req.user.id }).sort({ createdAt: -1 });
+    const properties = await Property.find({ owner: req.user.id, isDeleted: { $ne: true } }).sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
@@ -439,11 +527,11 @@ exports.getMyProperties = async (req, res, next) => {
 
 // @desc    Get Locality Price Analytics & Insights
 // @route   GET /api/v1/properties/analytics/localities
-// @access  Public
+// @access  Private
 exports.getLocalityStats = async (req, res, next) => {
   try {
     const stats = await Property.aggregate([
-      { $match: { status: 'active' } },
+      { $match: { status: 'active', isQuarantined: { $ne: true }, isDeleted: { $ne: true } } },
       {
         $group: {
           _id: '$locality',
@@ -468,26 +556,35 @@ exports.getLocalityStats = async (req, res, next) => {
   }
 };
 
-// @desc    Report Suspicious / Fake Listing
+// @desc    Report Suspicious / Fake Listing (Authenticated + Deduplicated)
 // @route   POST /api/v1/properties/:id/report
-// @access  Public (or Private)
+// @access  Private
 exports.reportProperty = async (req, res, next) => {
   try {
-    const { reason, comments } = req.body;
+    const { reason } = req.body;
 
     if (!reason || !reason.trim()) {
       return res.status(400).json({ success: false, message: 'Please provide a reason for reporting this listing.' });
     }
 
-    const property = await Property.findById(req.params.id);
+    const property = await Property.findOne({ _id: req.params.id, isDeleted: { $ne: true } });
 
     if (!property) {
       return res.status(404).json({ success: false, message: 'Property not found' });
     }
 
-    property.reportCount = (property.reportCount || 0) + 1;
+    const alreadyReported = (property.reportedBy || []).some(
+      (id) => id.toString() === req.user.id.toString()
+    );
+    if (alreadyReported) {
+      return res.status(400).json({ success: false, message: 'You have already reported this listing.' });
+    }
 
-    // Automated Anti-Scam Guard: Quarantine if 3 or more reports
+    property.reportedBy = property.reportedBy || [];
+    property.reportedBy.push(req.user.id);
+    property.reportCount = property.reportedBy.length;
+
+    // Automated Anti-Scam Guard: Quarantine if 3 or more unique users report
     if (property.reportCount >= 3) {
       property.isQuarantined = true;
       property.status = 'quarantined';
@@ -516,6 +613,10 @@ exports.toggleSaveProperty = async (req, res, next) => {
     }
 
     const propertyId = req.params.id;
+    const targetProperty = await Property.findOne({ _id: propertyId, isDeleted: { $ne: true } }).select('_id');
+    if (!targetProperty) {
+      return res.status(404).json({ success: false, message: 'Property not found' });
+    }
     const isAlreadySaved = (user.savedProperties || []).some(id => id.toString() === propertyId);
 
     let isSaved = false;
@@ -550,9 +651,10 @@ exports.getSavedProperties = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id).populate({
       path: 'savedProperties',
+      match: { isDeleted: { $ne: true } },
       populate: {
         path: 'owner',
-        select: 'name phone avatar verificationStatus'
+        select: 'name phone avatar verificationStatus contactPreference'
       }
     });
 
@@ -560,7 +662,9 @@ exports.getSavedProperties = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    const activeSaved = (user.savedProperties || []).filter(Boolean);
+    const activeSaved = (user.savedProperties || [])
+      .filter((p) => p && !p.isDeleted)
+      .map((p) => sanitizePropertyForViewer(p, req.user));
 
     res.status(200).json({
       success: true,

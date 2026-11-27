@@ -2,6 +2,7 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1',
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
     'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -39,10 +40,20 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
-      // Token expired or invalid
-      // localStorage.removeItem('rentnest_token');
-      // localStorage.removeItem('rentnest_user');
+    const reqUrl = error.config?.url || '';
+    const isAuthAttempt =
+      reqUrl.includes('/auth/login') ||
+      reqUrl.includes('/auth/register') ||
+      reqUrl.includes('/auth/verify-otp') ||
+      reqUrl.includes('/auth/demo-login');
+
+    if (error.response && error.response.status === 401 && !isAuthAttempt) {
+      localStorage.removeItem('rentnest_token');
+      localStorage.removeItem('rentnest_user');
+      localStorage.removeItem('rentnest_wishlist_ids');
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('rentnest:unauthorized'));
+      }
     }
     return Promise.reject(error);
   }

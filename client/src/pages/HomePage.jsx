@@ -4,15 +4,16 @@ import api from '../api/client';
 import PropertyCard from '../components/PropertyCard';
 import Seo, { getSiteUrl } from '../components/Seo';
 import { trackEvent } from '../utils/analytics';
-import { 
-  Search, 
-  MapPin, 
-  ShieldCheck, 
-  Zap, 
-  Droplets, 
-  Sparkles, 
-  ArrowRight, 
-  TrendingUp, 
+import { useAuth } from '../context/AuthContext';
+import {
+  Search,
+  MapPin,
+  ShieldCheck,
+  Zap,
+  Droplets,
+  Sparkles,
+  ArrowRight,
+  TrendingUp,
   PlusCircle,
   CheckCircle,
   FileText,
@@ -59,6 +60,7 @@ const CITY_LOCALITIES = {
 
 const HomePage = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [properties, setProperties] = useState([]);
   const [city, setCity] = useState(() => {
     const saved = localStorage.getItem('rentnest_selected_city');
@@ -68,12 +70,19 @@ const HomePage = () => {
   const [locality, setLocality] = useState('');
   const [bhk, setBhk] = useState('');
   const [commercialType, setCommercialType] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState(null);
 
   const currentLocalities = CITY_LOCALITIES[city] || CITY_LOCALITIES.Rajkot;
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      setProperties([]);
+      setStats(null);
+      setLoading(false);
+      return;
+    }
+
     const fetchData = async () => {
       try {
         setLoading(true);
@@ -94,7 +103,7 @@ const HomePage = () => {
       }
     };
     fetchData();
-  }, []);
+  }, [isAuthenticated]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -148,14 +157,14 @@ const HomePage = () => {
         canonicalPath="/"
         jsonLd={homeJsonLd}
       />
-      
+
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-b from-blue-900 via-slate-900 to-slate-950 text-white pt-12 sm:pt-16 pb-20 sm:pb-24 px-4 sm:px-6 lg:px-8">
         {/* Subtle background glow */}
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-blue-600/20 blur-[120px] rounded-full pointer-events-none"></div>
 
-        <div className="relative max-w-5xl mx-auto text-center space-y-5 sm:space-y-6">
-          
+        <div className="relative text-center space-y-5 sm:space-y-6">
+
           <div className="inline-flex items-center space-x-2 bg-blue-500/10 border border-blue-400/20 px-3.5 py-1.5 rounded-full text-xs font-bold text-blue-300">
             <Sparkles className="w-4 h-4 text-amber-400" />
             <span>Gujarat's #1 Transparent Living & Commercial Portal</span>
@@ -176,9 +185,8 @@ const HomePage = () => {
               <button
                 type="button"
                 onClick={() => setCategory('residential')}
-                className={`px-4 sm:px-5 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 ${
-                  category === 'residential' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-300 hover:text-white'
-                }`}
+                className={`px-4 sm:px-5 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 ${category === 'residential' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-300 hover:text-white'
+                  }`}
               >
                 <Home className="w-3.5 h-3.5" />
                 <span>Residential Homes</span>
@@ -186,9 +194,8 @@ const HomePage = () => {
               <button
                 type="button"
                 onClick={() => setCategory('commercial')}
-                className={`px-4 sm:px-5 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 ${
-                  category === 'commercial' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-300 hover:text-white'
-                }`}
+                className={`px-4 sm:px-5 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 ${category === 'commercial' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-300 hover:text-white'
+                  }`}
               >
                 <Building2 className="w-3.5 h-3.5" />
                 <span>Commercial Spaces</span>
@@ -334,9 +341,9 @@ const HomePage = () => {
       </section>
 
       {/* 3 Value Pillars */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          
+
           <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-sm hover:shadow-md transition-shadow space-y-3">
             <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
               <Zap className="w-6 h-6" />
@@ -370,42 +377,68 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* Featured Properties Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-          <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-blue-600">Verified & Freshly Listed in {city}</span>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              Featured Verified Rental Homes
-            </h2>
+      {/* Featured Properties Section: Only shown when logged in */}
+      {isAuthenticated ? (
+        <section className=" space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider text-blue-600">Verified & Freshly Listed in {city}</span>
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                Featured Verified Rental Homes
+              </h2>
+            </div>
+            <Link
+              to="/explore"
+              className="flex items-center space-x-1.5 text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-4 py-2.5 rounded-xl transition-colors self-start sm:self-auto"
+            >
+              <span>View All Properties on Map</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
-          <Link
-            to="/explore"
-            className="flex items-center space-x-1.5 text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-4 py-2.5 rounded-xl transition-colors self-start sm:self-auto"
-          >
-            <span>View All Properties on Map</span>
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
 
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[1, 2, 3].map((n) => (
-              <div key={n} className="h-80 bg-slate-100 rounded-2xl animate-pulse"></div>
-            ))}
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[1, 2, 3].map((n) => (
+                <div key={n} className="h-80 bg-slate-100 rounded-2xl animate-pulse"></div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {properties.map((prop) => (
+                <PropertyCard key={prop._id} property={prop} />
+              ))}
+            </div>
+          )}
+        </section>
+      ) : (
+        <section className="">
+          <div className="bg-white rounded-3xl p-8 sm:p-10 border border-slate-200 shadow-sm text-center space-y-4">
+            <div className="inline-flex items-center space-x-2 bg-blue-50 text-blue-700 px-3.5 py-1.5 rounded-full text-xs font-bold border border-blue-200">
+              <ShieldCheck className="w-4 h-4 text-blue-600" />
+              <span>Verified Member Access</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              Login to View Verified Property Listings &amp; Details
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 max-w-xl mx-auto leading-relaxed">
+              Sign in to browse full rental listings, PGVCL electricity meter records, exact addresses, direct owner contacts, and interactive map views.
+            </p>
+            <div>
+              <Link
+                to="/login"
+                className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-lg shadow-blue-500/20 transition-transform active:scale-95"
+              >
+                <span>Login / Sign Up to Explore</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {properties.map((prop) => (
-              <PropertyCard key={prop._id} property={prop} />
-            ))}
-          </div>
-        )}
-      </section>
+        </section>
+      )}
 
       {/* Locality Market Price Index */}
-      {stats && stats.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {isAuthenticated && stats && stats.length > 0 && (
+        <section className="">
           <div className="bg-slate-900 text-white rounded-3xl p-6 sm:p-10 space-y-6 border border-slate-800">
             <div className="flex items-center space-x-2 text-xs font-bold text-blue-400 uppercase tracking-wider">
               <TrendingUp className="w-4 h-4" />
@@ -430,7 +463,7 @@ const HomePage = () => {
       )}
 
       {/* Owner Call to Action */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="">
         <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl p-8 sm:p-12 text-white flex flex-col md:flex-row items-center justify-between gap-8 shadow-xl">
           <div className="space-y-3 max-w-xl text-center md:text-left">
             <h3 className="text-2xl sm:text-3xl font-black tracking-tight">

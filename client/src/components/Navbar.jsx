@@ -4,14 +4,14 @@ import { useAuth } from '../context/AuthContext';
 import { useCompare } from '../context/CompareContext';
 import { useWishlist } from '../context/WishlistContext';
 import { trackEvent } from '../utils/analytics';
-import { 
-  Home, 
-  PlusCircle, 
-  Scale, 
-  User, 
-  LogOut, 
-  FileText, 
-  CheckSquare, 
+import {
+  Home,
+  PlusCircle,
+  Scale,
+  User,
+  LogOut,
+  FileText,
+  CheckSquare,
   Calculator,
   Users,
   MessageSquare,
@@ -24,7 +24,8 @@ import {
   Sparkles,
   Building2,
   Heart,
-  ChevronDown
+  ChevronDown,
+  BarChart3
 } from 'lucide-react';
 
 const Navbar = () => {
@@ -43,6 +44,7 @@ const Navbar = () => {
     setSelectedCity(newCity);
     localStorage.setItem('rentnest_selected_city', newCity);
     trackEvent('select_city', { city: newCity });
+    if (!isAuthenticated) return;
     if (location.pathname === '/explore') {
       const search = new URLSearchParams(location.search);
       if (newCity === 'All') {
@@ -78,9 +80,10 @@ const Navbar = () => {
       case 'admin':
         return [
           { label: 'Admin Desk', to: '/admin', icon: Shield, badge: 'Review Desk' },
+          { label: 'Analytics', to: '/admin?tab=analytics', icon: BarChart3 },
+          { label: 'Users', to: '/admin?tab=users', icon: Users },
           { label: 'Operations', to: '/dashboard', icon: LayoutDashboard },
           { label: 'All Listings', to: '/explore', icon: Search },
-          // { label: 'Agreements', to: '/tools/rental-agreement', icon: FileText },
         ];
       case 'tenant':
       default:
@@ -112,9 +115,9 @@ const Navbar = () => {
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm print:hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          
+      <div className="">
+        <div className="flex items-center justify-between h-16 p-2">
+
           {/* Brand Logo & City Badge */}
           <div className="flex items-center space-x-3">
             <Link to="/" className="flex items-center space-x-2.5 group">
@@ -156,16 +159,17 @@ const Navbar = () => {
                   const [itemPath, itemQuery] = item.to.split('?');
                   const isActive = itemQuery
                     ? location.pathname === itemPath && location.search.includes(itemQuery)
-                    : location.pathname === itemPath && !(itemPath === '/explore' && location.search.includes('category=commercial'));
+                    : location.pathname === itemPath &&
+                    !(itemPath === '/explore' && location.search.includes('category=commercial')) &&
+                    !(itemPath === '/admin' && location.search.includes('tab='));
                   return (
                     <Link
                       key={item.to}
                       to={item.to}
-                      className={`px-3 py-2 rounded-xl transition-all flex items-center space-x-1.5 ${
-                        isActive
-                          ? 'text-blue-600 bg-blue-50 font-bold shadow-xs'
-                          : 'hover:text-slate-900 hover:bg-slate-100'
-                      }`}
+                      className={`px-3 py-2 rounded-xl transition-all flex items-center space-x-1.5 ${isActive
+                        ? 'text-blue-600 bg-blue-50 font-bold shadow-xs'
+                        : 'hover:text-slate-900 hover:bg-slate-100'
+                        }`}
                     >
                       <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
                       <span>{item.label}</span>
@@ -183,7 +187,7 @@ const Navbar = () => {
 
           {/* Right Action Bar */}
           <div className="flex items-center space-x-2 sm:space-x-3">
-            
+
             {/* If NOT logged in: No menus, no chat, no post buttons. Only Login / Sign Up */}
             {!isAuthenticated ? (
               <Link
@@ -314,15 +318,16 @@ const Navbar = () => {
               const [itemPath, itemQuery] = item.to.split('?');
               const isActive = itemQuery
                 ? location.pathname === itemPath && location.search.includes(itemQuery)
-                : location.pathname === itemPath && !(itemPath === '/explore' && location.search.includes('category=commercial'));
+                : location.pathname === itemPath &&
+                !(itemPath === '/explore' && location.search.includes('category=commercial')) &&
+                !(itemPath === '/admin' && location.search.includes('tab='));
               return (
                 <Link
                   key={item.to}
                   to={item.to}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
-                    isActive ? 'bg-blue-50 text-blue-600 font-bold' : 'text-slate-600 hover:bg-slate-50'
-                  }`}
+                  className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${isActive ? 'bg-blue-50 text-blue-600 font-bold' : 'text-slate-600 hover:bg-slate-50'
+                    }`}
                 >
                   <div className="flex items-center space-x-2.5">
                     <Icon className="w-4 h-4" />

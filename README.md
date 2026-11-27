@@ -100,9 +100,9 @@ docker compose -f docker-compose.dev.yml up --build
 12. **1-Click Demo Persona Switcher**: Instant switching between **Tenant**, **Direct Owner**, **Broker**, and **Admin** (with Dev OTP `123456`).
 13. **Progressive Web App (PWA)**: Web manifest and mobile standalone configuration ready for "Add to Home Screen".
 14. **SEO & Discoverability Architecture**:
-    - Crawlable public routes (`/`, `/explore`, `/roommates`, `/property/:idOrSlug`, `/tools/*`) with `noindex, nofollow` on auth/private dashboards.
+    - Crawlable public landing & tool routes (`/`, `/tools/hra-calculator`, `/tools/rental-agreement`, `/tools/move-in-checklist`) with login-gated property listings & details (`/explore`, `/roommates`, `/property/:idOrSlug` and `GET /api/v1/properties*`) and `noindex, nofollow` on auth/private dashboards.
     - Dynamic per-page `<title>`, meta descriptions, canonical URLs (`VITE_SITE_URL`), Open Graph / Twitter Cards, and Schema.org JSON-LD (`Organization`, `WebSite`, `CollectionPage`/`ItemList`, `RealEstateListing`, `WebApplication`) via `client/src/components/Seo.jsx`.
-    - `robots.txt` and dynamic `/sitemap.xml` generated from active MongoDB property slugs (`server/controllers/seoController.js`, proxied in `client/nginx.conf`).
+    - `robots.txt` and `/sitemap.xml` serving publicly crawlable routes (`server/controllers/seoController.js`, proxied in `client/nginx.conf`).
 15. **Google Analytics 4 (GA4) Page & Activity Tracking**:
     - `gtag.js` (`G-LLWCM48NRV`) loaded in `client/index.html` with SPA route `page_view` tracking in `client/src/App.jsx` and central helper in `client/src/utils/analytics.js` (no PII sent).
     - **Tracked Activity Events**:

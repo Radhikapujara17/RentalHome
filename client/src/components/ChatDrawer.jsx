@@ -29,7 +29,10 @@ const ChatDrawer = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (isAuthenticated) {
       const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
-      socket = io(socketUrl);
+      socket = io(socketUrl, {
+        auth: { token: localStorage.getItem('rentnest_token') },
+        withCredentials: true,
+      });
 
       socket.on('messageReceived', (newMsg) => {
         if (activeConversation && newMsg.conversation === activeConversation._id) {

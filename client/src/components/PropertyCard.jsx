@@ -250,25 +250,35 @@ const PropertyCard = ({ property, onSelectOnMap, onHover, onLeave }) => {
 
         {/* Action Buttons */}
         <div className="pt-2 flex items-center space-x-2 border-t border-slate-100">
-          <a
-            href={whatsappUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() =>
-              trackEvent('contact_owner', {
-                channel: 'whatsapp',
-                source: 'property_card',
-                property_id: property._id,
-                city: property.city || 'Rajkot',
-                locality: property.locality,
-                category: property.category,
-              })
-            }
-            className="flex-1 py-2 px-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 shadow-sm transition-colors active:scale-95"
-          >
-            <MessageCircle className="w-3.5 h-3.5" />
-            <span>WhatsApp</span>
-          </a>
+          {property.owner?.phoneHidden ? (
+            <Link
+              to={`/property/${property.slug || property._id}`}
+              className="flex-1 py-2 px-3 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition-colors"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              <span>In-App Chat</span>
+            </Link>
+          ) : (
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() =>
+                trackEvent('contact_owner', {
+                  channel: 'whatsapp',
+                  source: 'property_card',
+                  property_id: property._id,
+                  city: property.city || 'Rajkot',
+                  locality: property.locality,
+                  category: property.category,
+                })
+              }
+              className="flex-1 py-2 px-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 shadow-sm transition-colors active:scale-95"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              <span>WhatsApp</span>
+            </a>
+          )}
 
           <Link
             to={`/property/${property.slug || property._id}`}

@@ -15,6 +15,16 @@ export const AuthProvider = ({ children }) => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
 
+  // Sync React auth state when API interceptor clears invalid/soft-deleted session
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      setUser(null);
+      setToken(null);
+    };
+    window.addEventListener('rentnest:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('rentnest:unauthorized', handleUnauthorized);
+  }, []);
+
   // Quick switch demo login
   const demoLogin = async (role = 'tenant') => {
     try {
@@ -132,12 +142,36 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    api.post('/auth/logout').catch(() => {});
     setUser(null);
     setToken(null);
     localStorage.removeItem('rentnest_token');
     localStorage.removeItem('rentnest_user');
     localStorage.removeItem('rentnest_wishlist_ids');
     toast.success('Logged out successfully');
+  };
+
+  const deleteAccount = async () => {
+    try {
+      setLoading(true);
+      const res = await api.delete('/auth/me');
+      if (res.data.success) {
+        setUser(null);
+        setToken(null);
+        localStorage.removeItem('rentnest_token');
+        localStorage.removeItem('rentnest_user');
+        localStorage.removeItem('rentnest_wishlist_ids');
+        toast.success(res.data.message || 'Account deactivated successfully');
+        return { success: true };
+      }
+      return { success: false };
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to deactivate account';
+      toast.error(msg);
+      return { success: false, message: msg };
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -153,6 +187,7 @@ export const AuthProvider = ({ children }) => {
         verifyOtp,
         updateUserRole,
         logout,
+        deleteAccount,
         isAuthModalOpen,
         setIsAuthModalOpen,
         isChatOpen,

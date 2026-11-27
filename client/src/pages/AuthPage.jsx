@@ -250,42 +250,44 @@ const AuthPage = () => {
             </div>
           </div>
 
-          {/* Quick Demo Persona Bar */}
-          <div className="mt-8 pt-6 border-t border-white/10 relative z-10">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-2">
-              Instant 1-Click Demo Login
-            </span>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => demoLogin('tenant')}
-                className="py-1.5 px-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-semibold text-slate-200 transition-colors text-left"
-              >
-                👤 Tenant
-              </button>
-              <button
-                type="button"
-                onClick={() => demoLogin('owner')}
-                className="py-1.5 px-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-semibold text-slate-200 transition-colors text-left"
-              >
-                🏠 Owner
-              </button>
-              <button
-                type="button"
-                onClick={() => demoLogin('broker')}
-                className="py-1.5 px-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-semibold text-slate-200 transition-colors text-left"
-              >
-                💼 Broker
-              </button>
-              <button
-                type="button"
-                onClick={() => demoLogin('admin')}
-                className="py-1.5 px-2.5 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-[11px] font-semibold text-purple-200 transition-colors text-left"
-              >
-                🛡️ Admin
-              </button>
+          {/* Quick Demo Persona Bar (Dev / Demo Mode only) */}
+          {(import.meta.env.DEV || import.meta.env.VITE_ENABLE_DEMO_MODE === 'true') && (
+            <div className="mt-8 pt-6 border-t border-white/10 relative z-10">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-2">
+                Instant 1-Click Demo Login
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => demoLogin('tenant')}
+                  className="py-1.5 px-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-semibold text-slate-200 transition-colors text-left"
+                >
+                  👤 Tenant
+                </button>
+                <button
+                  type="button"
+                  onClick={() => demoLogin('owner')}
+                  className="py-1.5 px-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-semibold text-slate-200 transition-colors text-left"
+                >
+                  🏠 Owner
+                </button>
+                <button
+                  type="button"
+                  onClick={() => demoLogin('broker')}
+                  className="py-1.5 px-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-semibold text-slate-200 transition-colors text-left"
+                >
+                  💼 Broker
+                </button>
+                <button
+                  type="button"
+                  onClick={() => demoLogin('admin')}
+                  className="py-1.5 px-2.5 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-[11px] font-semibold text-purple-200 transition-colors text-left"
+                >
+                  🛡️ Admin
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Right Form Card */}

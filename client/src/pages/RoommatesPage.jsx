@@ -2,15 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
 import Seo from '../components/Seo';
-import { 
-  Users, 
-  MapPin, 
-  IndianRupee, 
-  ShieldCheck, 
-  MessageCircle, 
-  PlusCircle, 
-  Filter, 
-  GraduationCap, 
+import {
+  Users,
+  MapPin,
+  IndianRupee,
+  ShieldCheck,
+  MessageCircle,
+  PlusCircle,
+  Filter,
+  GraduationCap,
   Briefcase,
   Wifi,
   Sparkles
@@ -48,13 +48,13 @@ const RoommatesPage = () => {
   });
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+    <div className=" py-10 space-y-8">
       <Seo
         title="Flatmates & Shared Rooms in Rajkot & Gujarat | RentNest"
         description="Find verified flatmates, single/shared PG rooms, and transparent co-living spaces near Saurashtra University, Kalawad Road, and major Gujarat hubs."
         canonicalPath="/roommates"
       />
-      
+
       {/* Hero Header */}
       <div className="bg-gradient-to-r from-indigo-900 via-blue-900 to-slate-900 rounded-3xl p-8 sm:p-12 text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl relative overflow-hidden">
         <div className="space-y-3 max-w-xl z-10 text-center md:text-left">
@@ -84,7 +84,7 @@ const RoommatesPage = () => {
 
       {/* Filter Tabs */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
-        
+
         {/* Gender Filters */}
         <div className="flex items-center space-x-2">
           <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">Looking For:</span>
@@ -92,11 +92,10 @@ const RoommatesPage = () => {
             <button
               key={g}
               onClick={() => setGenderFilter(g)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                genderFilter === g
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${genderFilter === g
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
+                }`}
             >
               {g}
             </button>
@@ -157,9 +156,8 @@ const RoommatesPage = () => {
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute top-3 left-3 flex gap-2">
-                      <span className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-full text-white shadow-md ${
-                        isFemale ? 'bg-pink-600' : 'bg-blue-600'
-                      }`}>
+                      <span className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-full text-white shadow-md ${isFemale ? 'bg-pink-600' : 'bg-blue-600'
+                        }`}>
                         {isFemale ? 'Female Flatmate' : 'Male Flatmate'}
                       </span>
                       <span className="bg-slate-900/90 text-white text-[10px] font-bold px-2 py-1 rounded-full">

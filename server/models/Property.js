@@ -178,9 +178,13 @@ const propertySchema = new mongoose.Schema({
   lastFreshnessConfirmedAt: { type: Date, default: Date.now },
   freshnessReminderCount: { type: Number, default: 0 },
 
-  // Anti-scam Moderation
+  // Anti-scam Moderation & Soft Delete
   reportCount: { type: Number, default: 0 },
-  isQuarantined: { type: Boolean, default: false }
+  reportedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  isQuarantined: { type: Boolean, default: false },
+  isDeleted: { type: Boolean, default: false, index: true },
+  deletedAt: Date,
+  deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });
 
 // Auto-generate slug and listingNumber before validation

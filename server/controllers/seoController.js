@@ -1,5 +1,3 @@
-const Property = require('../models/Property');
-
 const escapeXml = (str = '') =>
   String(str)
     .replace(/&/g, '&amp;')
@@ -29,6 +27,9 @@ exports.getRobotsTxt = (req, res) => {
   const content = [
     'User-agent: *',
     'Allow: /',
+    'Disallow: /explore',
+    'Disallow: /roommates',
+    'Disallow: /property/',
     'Disallow: /dashboard',
     'Disallow: /admin',
     'Disallow: /post-property',
@@ -48,48 +49,16 @@ exports.getSitemapXml = async (req, res) => {
   const baseUrl = resolveSiteBaseUrl(req);
   const today = new Date().toISOString().split('T')[0];
 
-  const staticRoutes = [
+  const publicRoutes = [
     { path: '/', changefreq: 'daily', priority: '1.0', lastmod: today },
-    { path: '/explore', changefreq: 'hourly', priority: '0.9', lastmod: today },
-    { path: '/explore?category=commercial', changefreq: 'daily', priority: '0.8', lastmod: today },
-    { path: '/explore?city=Rajkot', changefreq: 'daily', priority: '0.8', lastmod: today },
-    { path: '/explore?city=Ahmedabad', changefreq: 'daily', priority: '0.8', lastmod: today },
-    { path: '/explore?city=Surat', changefreq: 'daily', priority: '0.8', lastmod: today },
-    { path: '/explore?city=Vadodara', changefreq: 'daily', priority: '0.8', lastmod: today },
-    { path: '/roommates', changefreq: 'daily', priority: '0.8', lastmod: today },
-    { path: '/tools/hra-calculator', changefreq: 'monthly', priority: '0.7', lastmod: today },
-    { path: '/tools/rental-agreement', changefreq: 'monthly', priority: '0.7', lastmod: today },
-    { path: '/tools/move-in-checklist', changefreq: 'monthly', priority: '0.6', lastmod: today },
+    { path: '/tools/hra-calculator', changefreq: 'monthly', priority: '0.8', lastmod: today },
+    { path: '/tools/rental-agreement', changefreq: 'monthly', priority: '0.8', lastmod: today },
+    { path: '/tools/move-in-checklist', changefreq: 'monthly', priority: '0.7', lastmod: today },
+    { path: '/privacy-policy', changefreq: 'monthly', priority: '0.5', lastmod: today },
+    { path: '/terms', changefreq: 'monthly', priority: '0.5', lastmod: today },
   ];
 
-  let properties = [];
-  try {
-    properties = await Property.find({
-      status: 'active',
-      isQuarantined: { $ne: true },
-    })
-      .select('slug _id updatedAt createdAt')
-      .sort({ updatedAt: -1 })
-      .limit(5000)
-      .lean();
-  } catch (err) {
-    console.warn('Sitemap property query skipped:', err.message);
-  }
-
-  const propertyUrls = properties.map((prop) => {
-    const slugOrId = prop.slug || prop._id;
-    const lastmodDate = prop.updatedAt || prop.createdAt;
-    const lastmod = lastmodDate ? new Date(lastmodDate).toISOString().split('T')[0] : today;
-    return {
-      path: `/property/${slugOrId}`,
-      changefreq: 'weekly',
-      priority: '0.8',
-      lastmod,
-    };
-  });
-
-  const allUrls = [...staticRoutes, ...propertyUrls];
-  const urlEntries = allUrls
+  const urlEntries = publicRoutes
     .map(
       (entry) => `  <url>
     <loc>${escapeXml(`${baseUrl}${entry.path}`)}</loc>

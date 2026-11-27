@@ -6,6 +6,7 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
 
+const { protect } = require('../middleware/auth');
 const {
   calculateHra,
   generateAgreement,
@@ -13,7 +14,7 @@ const {
   uploadImage
 } = require('../controllers/toolsController');
 
-router.post('/upload-image', upload.single('image'), uploadImage);
+router.post('/upload-image', protect, upload.single('image'), uploadImage);
 router.post('/hra-calculator', calculateHra);
 router.post('/rental-agreement', generateAgreement);
 router.post('/qr-code', generateQrCode);

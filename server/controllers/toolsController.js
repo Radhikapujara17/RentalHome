@@ -3,23 +3,37 @@ const path = require('path');
 const QRCode = require('qrcode');
 const { uploadStream } = require('../utils/cloudinary');
 
-// @desc    Direct Image Upload (Saves exact photo to local storage + Cloudinary)
+const ALLOWED_IMAGE_MIME_TYPES = {
+  'image/jpeg': '.jpg',
+  'image/jpg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp'
+};
+
+// @desc    Direct Image Upload (Authenticated + strict MIME allowlist)
 // @route   POST /api/v1/tools/upload-image
-// @access  Public
+// @access  Private
 exports.uploadImage = async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'Please provide an image file' });
     }
 
-    // Always save exact user image to local uploads directory
+    const safeExt = ALLOWED_IMAGE_MIME_TYPES[req.file.mimetype];
+    if (!safeExt) {
+      return res.status(400).json({
+        success: false,
+        message: 'Only JPEG, PNG, and WebP image files are allowed.'
+      });
+    }
+
+    // Always save exact user image to local uploads directory using safe extension
     const uploadDir = path.join(__dirname, '../public/uploads');
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
 
-    const ext = path.extname(req.file.originalname) || '.jpg';
-    const filename = `prop_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}${ext}`;
+    const filename = `prop_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}${safeExt}`;
     const filePath = path.join(uploadDir, filename);
 
     fs.writeFileSync(filePath, req.file.buffer);
