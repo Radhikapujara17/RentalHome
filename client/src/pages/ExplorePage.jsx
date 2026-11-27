@@ -157,35 +157,33 @@ const ExplorePage = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <div className="p-2">
       <Seo
         title={exploreTitle}
         description={exploreDescription}
         canonicalPath={exploreCanonicalPath}
         jsonLd={exploreJsonLd}
       />
-      
+
       {/* Category Toggle Tabs */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm">
         <div className="flex items-center space-x-2 bg-slate-100 p-1.5 rounded-2xl w-full sm:w-fit">
           <button
             onClick={() => handleCategorySwitch('residential')}
-            className={`flex-1 sm:flex-initial flex items-center justify-center space-x-2 px-5 py-2.5 rounded-xl text-xs font-black transition-all ${
-              !isCommercial
-                ? 'bg-white text-blue-600 shadow-sm scale-[1.02]'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
+            className={`flex-1 sm:flex-initial flex items-center justify-center space-x-2 px-5 py-2.5 rounded-xl text-xs font-black transition-all ${!isCommercial
+              ? 'bg-white text-blue-600 shadow-sm scale-[1.02]'
+              : 'text-slate-600 hover:text-slate-900'
+              }`}
           >
             <Home className="w-4 h-4" />
             <span>🏠 Residential Homes</span>
           </button>
           <button
             onClick={() => handleCategorySwitch('commercial')}
-            className={`flex-1 sm:flex-initial flex items-center justify-center space-x-2 px-5 py-2.5 rounded-xl text-xs font-black transition-all ${
-              isCommercial
-                ? 'bg-blue-600 text-white shadow-sm scale-[1.02]'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
+            className={`flex-1 sm:flex-initial flex items-center justify-center space-x-2 px-5 py-2.5 rounded-xl text-xs font-black transition-all ${isCommercial
+              ? 'bg-blue-600 text-white shadow-sm scale-[1.02]'
+              : 'text-slate-600 hover:text-slate-900'
+              }`}
           >
             <Building2 className="w-4 h-4" />
             <span>🏢 Commercial Spaces</span>
@@ -193,18 +191,18 @@ const ExplorePage = () => {
         </div>
 
         <div className="text-xs font-semibold text-slate-500 hidden sm:block">
-          {isCommercial 
-            ? '⚡ Retail Shops, Corporate Offices, Showrooms & Industrial Sheds' 
+          {isCommercial
+            ? '⚡ Retail Shops, Corporate Offices, Showrooms & Industrial Sheds'
             : '🌱 Verified Flats, Independent Houses & Coliving Homes'}
         </div>
       </div>
 
       {/* Header and Mobile View Toggle */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
+        <div className="p-2">
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-            {isCommercial 
-              ? `Commercial Spaces for Rent in ${filters.city || 'Gujarat'}` 
+            {isCommercial
+              ? `Commercial Spaces for Rent in ${filters.city || 'Gujarat'}`
               : `Rental Homes in ${filters.city || 'Gujarat'}`}
           </h1>
           <p className="text-xs text-slate-500 font-medium">
@@ -253,7 +251,7 @@ const ExplorePage = () => {
 
       {/* Split-Screen Main Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[680px]">
-        
+
         {/* Left Side: Interactive Map (Desktop 5 cols) */}
         <div className={`lg:col-span-5 h-[550px] lg:h-[750px] sticky top-20 rounded-2xl overflow-hidden shadow-sm ${viewMode === 'list' ? 'hidden md:block' : 'block'}`}>
           <SplitMap
@@ -267,7 +265,7 @@ const ExplorePage = () => {
 
         {/* Right Side: Properties Scrollable Grid (Desktop 7 cols) */}
         <div className={`lg:col-span-7 space-y-4 ${viewMode === 'map' ? 'hidden md:block' : 'block'}`}>
-          
+
           {loading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[1, 2, 3, 4].map((i) => (

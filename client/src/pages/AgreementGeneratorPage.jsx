@@ -81,7 +81,7 @@ const AgreementGeneratorPage = () => {
 
   const siteUrl = getSiteUrl();
   return (
-    <div className="max-w-5xl mx-auto px-4 py-10 space-y-8">
+    <div className="px-4 py-10 space-y-8">
       <Seo
         title="Gujarat 11-Month Rental Agreement Generator (Free Online Draft) | RentNest"
         description="Draft a transparent 11-month residential rent agreement for Rajkot & Gujarat with deposit clauses, PGVCL electricity meter terms, and notice period protection."
@@ -96,7 +96,7 @@ const AgreementGeneratorPage = () => {
           offers: { '@type': 'Offer', price: '0', priceCurrency: 'INR' },
         }}
       />
-      
+
       {/* Header */}
       <div className="text-center space-y-2 print:hidden">
         <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-indigo-50 text-indigo-800 text-xs font-bold border border-indigo-200">
@@ -112,7 +112,7 @@ const AgreementGeneratorPage = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 print:block">
-        
+
         {/* Form (5 cols) */}
         <div className="lg:col-span-5 bg-white p-6 rounded-3xl border border-slate-200 shadow-md space-y-4 print:hidden">
           <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider pb-2 border-b border-slate-100">
@@ -240,7 +240,7 @@ const AgreementGeneratorPage = () => {
 
         {/* Legal Text Preview (7 cols) */}
         <div className="lg:col-span-7 space-y-4 print:w-full">
-          
+
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-md space-y-4 print:border-0 print:shadow-none print:p-0">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center space-x-2">

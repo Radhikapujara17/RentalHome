@@ -22,8 +22,8 @@ exports.createVisitRequest = async (req, res, next) => {
     }
 
     const property = await Property.findById(propertyId);
-    if (!property) {
-      return res.status(404).json({ success: false, message: 'Property not found' });
+    if (!property || property.isDeleted || property.isQuarantined) {
+      return res.status(404).json({ success: false, message: 'Property not found or unavailable' });
     }
 
     // Prevent owner from visiting their own property
@@ -89,17 +89,33 @@ exports.updateVisitStatus = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Visit request not found' });
     }
 
-    // Only tenant or owner can modify
+    // Role-based status authorization
     const isOwner = visit.owner.toString() === req.user.id;
     const isTenant = visit.tenant.toString() === req.user.id;
+    const isAdmin = req.user.role === 'admin';
 
-    if (!isOwner && !isTenant && req.user.role !== 'admin') {
+    if (!isOwner && !isTenant && !isAdmin) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
+    const allowedStatuses = ['pending', 'accepted', 'rescheduled', 'declined', 'completed', 'cancelled'];
+    if (status && !allowedStatuses.includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid visit status' });
+    }
+
+    if (!isOwner && !isAdmin) {
+      // Tenants may only cancel their own visit request; they cannot self-approve or reschedule owner slots
+      if ((status && status !== 'cancelled') || ownerCounterDate || ownerCounterSlot) {
+        return res.status(403).json({
+          success: false,
+          message: 'Only the property owner can approve, reschedule, or complete a visit pass.'
+        });
+      }
+    }
+
     if (status) visit.status = status;
-    if (ownerCounterDate) visit.ownerCounterDate = ownerCounterDate;
-    if (ownerCounterSlot) visit.ownerCounterSlot = ownerCounterSlot;
+    if ((isOwner || isAdmin) && ownerCounterDate) visit.ownerCounterDate = ownerCounterDate;
+    if ((isOwner || isAdmin) && ownerCounterSlot) visit.ownerCounterSlot = ownerCounterSlot;
 
     await visit.save();
 

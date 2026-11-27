@@ -69,7 +69,7 @@ const userSchema = new mongoose.Schema({
     enum: ['unverified', 'pending', 'verified', 'rejected'],
     default: 'unverified'
   },
-  kycDocumentUrl: String,
+  kycDocumentUrl: { type: String, select: false },
   kycDocumentType: { type: String, enum: ['electricity_bill', 'property_tax', 'index_copy'] },
   kycSubmittedAt: Date,
   kycVerifiedAt: Date,
@@ -86,8 +86,12 @@ const userSchema = new mongoose.Schema({
   isFlaggedAsBroker: { type: Boolean, default: false },
 
   // OTP Management
-  otpCode: String,
-  otpExpiresAt: Date
+  otpCode: { type: String, select: false },
+  otpExpiresAt: { type: Date, select: false },
+
+  // Soft Delete / Account Deactivation
+  isDeleted: { type: Boolean, default: false, index: true },
+  deletedAt: Date
 }, { timestamps: true });
 
 // Hash password before saving if modified

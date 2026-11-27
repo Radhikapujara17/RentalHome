@@ -10,6 +10,7 @@ import Footer from './components/Footer';
 import AuthModal from './components/AuthModal';
 import CompareModal from './components/CompareModal';
 import ChatDrawer from './components/ChatDrawer';
+import ConsentBanner from './components/ConsentBanner';
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -23,6 +24,8 @@ import DashboardPage from './pages/DashboardPage';
 import RoommatesPage from './pages/RoommatesPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import AuthPage from './pages/AuthPage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import TermsPage from './pages/TermsPage';
 
 function AppContent() {
   const { isChatOpen, setIsChatOpen, isAuthenticated } = useAuth();
@@ -53,24 +56,26 @@ function AppContent() {
           },
         }}
       />
-      
+
       <Navbar />
 
-      <main className="flex-grow">
+      <main className="flex-grow p-2">
         <Routes>
-          {/* Publicly Crawlable Routes */}
+          {/* Publicly Crawlable SEO Pages */}
           <Route path="/" element={<HomePage />} />
           <Route path="/home" element={<HomePage />} />
-          <Route path="/explore" element={<ExplorePage />} />
-          <Route path="/roommates" element={<RoommatesPage />} />
-          <Route path="/property/:idOrSlug" element={<PropertyDetailPage />} />
           <Route path="/tools/hra-calculator" element={<HraCalculatorPage />} />
           <Route path="/tools/rental-agreement" element={<AgreementGeneratorPage />} />
           <Route path="/tools/move-in-checklist" element={<MoveInChecklistPage />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
           <Route path="/login" element={<AuthPage />} />
           <Route path="/register" element={<AuthPage />} />
 
-          {/* Protected Application Routes: Require Login, otherwise redirect to /login */}
+          {/* Protected Application Routes: Require Login to view property lists, details, or manage listings */}
+          <Route path="/explore" element={!isAuthenticated ? <Navigate to="/login" replace /> : <ExplorePage />} />
+          <Route path="/roommates" element={!isAuthenticated ? <Navigate to="/login" replace /> : <RoommatesPage />} />
+          <Route path="/property/:idOrSlug" element={!isAuthenticated ? <Navigate to="/login" replace /> : <PropertyDetailPage />} />
           <Route path="/post-property" element={!isAuthenticated ? <Navigate to="/login" replace /> : <PostPropertyPage />} />
           <Route path="/edit-property/:id" element={!isAuthenticated ? <Navigate to="/login" replace /> : <PostPropertyPage />} />
           <Route path="/dashboard" element={!isAuthenticated ? <Navigate to="/login" replace /> : <DashboardPage />} />
@@ -85,6 +90,7 @@ function AppContent() {
       <AuthModal />
       <CompareModal />
       <ChatDrawer isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+      <ConsentBanner />
     </div>
   );
 }

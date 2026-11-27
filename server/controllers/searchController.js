@@ -31,12 +31,15 @@ exports.saveSearch = async (req, res, next) => {
   }
 };
 
-// @desc    Get User's Saved Searches
+// @desc    Get User's Saved Searches (excluding soft deleted)
 // @route   GET /api/v1/searches/my
 // @access  Private
 exports.getMySavedSearches = async (req, res, next) => {
   try {
-    const searches = await SavedSearch.find({ user: req.user.id }).sort({ createdAt: -1 });
+    const searches = await SavedSearch.find({
+      user: req.user.id,
+      isDeleted: { $ne: true }
+    }).sort({ createdAt: -1 });
     res.status(200).json({
       success: true,
       count: searches.length,
@@ -47,12 +50,19 @@ exports.getMySavedSearches = async (req, res, next) => {
   }
 };
 
-// @desc    Delete Saved Search
+// @desc    Soft Delete Saved Search
 // @route   DELETE /api/v1/searches/:id
 // @access  Private
 exports.deleteSavedSearch = async (req, res, next) => {
   try {
-    await SavedSearch.findOneAndDelete({ _id: req.params.id, user: req.user.id });
+    const updated = await SavedSearch.findOneAndUpdate(
+      { _id: req.params.id, user: req.user.id, isDeleted: { $ne: true } },
+      { isDeleted: true, deletedAt: new Date() },
+      { new: true }
+    );
+    if (!updated) {
+      return res.status(404).json({ success: false, message: 'Saved search not found' });
+    }
     res.status(200).json({
       success: true,
       message: 'Saved search removed'

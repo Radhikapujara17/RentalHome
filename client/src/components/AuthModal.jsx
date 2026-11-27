@@ -65,7 +65,7 @@ const AuthModal = () => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
       <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-4 max-h-[92vh] flex flex-col">
-        
+
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-5 sm:px-6 py-4 sm:py-5 text-white flex items-center justify-between shrink-0">
           <div>
@@ -81,87 +81,91 @@ const AuthModal = () => {
         </div>
 
         <div className="p-4 sm:p-6 space-y-5 overflow-y-auto">
-          
-          {/* Quick Demo 1-Click Login Section */}
-          <div className="bg-blue-50/70 border border-blue-200/80 rounded-2xl p-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-blue-800 flex items-center space-x-1.5">
-                <Shield className="w-3.5 h-3.5 text-blue-600" />
-                <span>Instant 1-Click Demo Login</span>
-              </span>
-              <span className="text-[10px] bg-blue-200/80 text-blue-900 font-bold px-2 py-0.5 rounded-full">
-                Try Any Role
-              </span>
-            </div>
 
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <button
-                type="button"
-                onClick={() => demoLogin('tenant')}
-                disabled={loading}
-                className="flex items-center space-x-2 p-2.5 rounded-xl bg-white border border-slate-200 hover:border-blue-500 hover:bg-blue-50/50 font-bold text-slate-800 transition-all text-left shadow-sm"
-              >
-                <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                  <UserCheck className="w-4 h-4" />
+          {/* Quick Demo 1-Click Login Section (Dev / Demo Mode only) */}
+          {(import.meta.env.DEV || import.meta.env.VITE_ENABLE_DEMO_MODE === 'true') && (
+            <>
+              <div className="bg-blue-50/70 border border-blue-200/80 rounded-2xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-bold uppercase tracking-wider text-blue-800 flex items-center space-x-1.5">
+                    <Shield className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Instant 1-Click Demo Login</span>
+                  </span>
+                  <span className="text-[10px] bg-blue-200/80 text-blue-900 font-bold px-2 py-0.5 rounded-full">
+                    Try Any Role
+                  </span>
                 </div>
-                <div>
-                  <div className="leading-tight">Tenant</div>
-                  <div className="text-[10px] text-slate-400 font-medium">Home Seeker</div>
-                </div>
-              </button>
 
-              <button
-                type="button"
-                onClick={() => demoLogin('owner')}
-                disabled={loading}
-                className="flex items-center space-x-2 p-2.5 rounded-xl bg-white border border-slate-200 hover:border-blue-500 hover:bg-blue-50/50 font-bold text-slate-800 transition-all text-left shadow-sm"
-              >
-                <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
-                  <Home className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="leading-tight">Direct Owner</div>
-                  <div className="text-[10px] text-slate-400 font-medium">Verified Landlord</div>
-                </div>
-              </button>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => demoLogin('tenant')}
+                    disabled={loading}
+                    className="flex items-center space-x-2 p-2.5 rounded-xl bg-white border border-slate-200 hover:border-blue-500 hover:bg-blue-50/50 font-bold text-slate-800 transition-all text-left shadow-sm"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                      <UserCheck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="leading-tight">Tenant</div>
+                      <div className="text-[10px] text-slate-400 font-medium">Home Seeker</div>
+                    </div>
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => demoLogin('broker')}
-                disabled={loading}
-                className="flex items-center space-x-2 p-2.5 rounded-xl bg-white border border-slate-200 hover:border-blue-500 hover:bg-blue-50/50 font-bold text-slate-800 transition-all text-left shadow-sm"
-              >
-                <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
-                  <Briefcase className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="leading-tight">Broker / Agent</div>
-                  <div className="text-[10px] text-slate-400 font-medium">Transparent Terms</div>
-                </div>
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => demoLogin('owner')}
+                    disabled={loading}
+                    className="flex items-center space-x-2 p-2.5 rounded-xl bg-white border border-slate-200 hover:border-blue-500 hover:bg-blue-50/50 font-bold text-slate-800 transition-all text-left shadow-sm"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+                      <Home className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="leading-tight">Direct Owner</div>
+                      <div className="text-[10px] text-slate-400 font-medium">Verified Landlord</div>
+                    </div>
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => demoLogin('admin')}
-                disabled={loading}
-                className="flex items-center space-x-2 p-2.5 rounded-xl bg-white border border-slate-200 hover:border-blue-500 hover:bg-blue-50/50 font-bold text-slate-800 transition-all text-left shadow-sm"
-              >
-                <div className="w-7 h-7 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
-                  <Lock className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="leading-tight">Admin</div>
-                  <div className="text-[10px] text-slate-400 font-medium">Operations Desk</div>
-                </div>
-              </button>
-            </div>
-          </div>
+                  <button
+                    type="button"
+                    onClick={() => demoLogin('broker')}
+                    disabled={loading}
+                    className="flex items-center space-x-2 p-2.5 rounded-xl bg-white border border-slate-200 hover:border-blue-500 hover:bg-blue-50/50 font-bold text-slate-800 transition-all text-left shadow-sm"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                      <Briefcase className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="leading-tight">Broker / Agent</div>
+                      <div className="text-[10px] text-slate-400 font-medium">Transparent Terms</div>
+                    </div>
+                  </button>
 
-          <div className="relative flex py-1 items-center">
-            <div className="flex-grow border-t border-slate-200"></div>
-            <span className="flex-shrink mx-4 text-xs font-semibold text-slate-400 uppercase">Or Login with Phone OTP</span>
-            <div className="flex-grow border-t border-slate-200"></div>
-          </div>
+                  <button
+                    type="button"
+                    onClick={() => demoLogin('admin')}
+                    disabled={loading}
+                    className="flex items-center space-x-2 p-2.5 rounded-xl bg-white border border-slate-200 hover:border-blue-500 hover:bg-blue-50/50 font-bold text-slate-800 transition-all text-left shadow-sm"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
+                      <Lock className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="leading-tight">Admin</div>
+                      <div className="text-[10px] text-slate-400 font-medium">Operations Desk</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              <div className="relative flex py-1 items-center">
+                <div className="flex-grow p-2 border-t border-slate-200"></div>
+                <span className="flex-shrink mx-4 text-xs font-semibold text-slate-400 uppercase">Or Login with Phone OTP</span>
+                <div className="flex-grow p-2 border-t border-slate-200"></div>
+              </div>
+            </>
+          )}
 
           {/* Standard Phone OTP Form */}
           {step === 'phone' ? (
@@ -185,13 +189,12 @@ const AuthModal = () => {
                     onChange={(e) => setPhone(e.target.value.replace(/[^\d+ -]/g, ''))}
                     placeholder="+91 98765 43210"
                     required
-                    className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm focus:ring-2 outline-none font-medium transition-colors ${
-                      phone && !validatePhone(phone)
+                    className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm focus:ring-2 outline-none font-medium transition-colors ${phone && !validatePhone(phone)
                         ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-100'
                         : phone && validatePhone(phone)
-                        ? 'border-emerald-300 focus:border-emerald-500 focus:ring-emerald-100'
-                        : 'border-slate-200 focus:border-blue-600 focus:ring-blue-100'
-                    }`}
+                          ? 'border-emerald-300 focus:border-emerald-500 focus:ring-emerald-100'
+                          : 'border-slate-200 focus:border-blue-600 focus:ring-blue-100'
+                      }`}
                   />
                 </div>
                 {phone && !validatePhone(phone) && (

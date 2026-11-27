@@ -1,5 +1,8 @@
 User-agent: *
 Allow: /
+Disallow: /explore
+Disallow: /roommates
+Disallow: /property/
 Disallow: /dashboard
 Disallow: /admin
 Disallow: /post-property

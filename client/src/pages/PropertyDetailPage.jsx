@@ -90,7 +90,7 @@ const PropertyDetailPage = () => {
 
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto px-4 py-12 space-y-6 animate-pulse">
+      <div className="px-4 py-12 space-y-6 animate-pulse">
         <div className="h-96 bg-slate-200 rounded-3xl"></div>
         <div className="h-10 bg-slate-200 rounded-xl w-2/3"></div>
         <div className="h-6 bg-slate-200 rounded-xl w-1/3"></div>
@@ -140,11 +140,11 @@ const PropertyDetailPage = () => {
   const whatsappNum = property.owner?.phone ? property.owner.phone.replace(/[^0-9]/g, '') : '919876543202';
   const whatsappMsg = isCommercial
     ? encodeURIComponent(
-        `Hello! I saw your commercial property "${property.title}" at ${property.societyName}, ${property.locality} on RentNest (₹${property.pricing.monthlyRent}/mo). Is it available for inspection?`
-      )
+      `Hello! I saw your commercial property "${property.title}" at ${property.societyName}, ${property.locality} on RentNest (₹${property.pricing.monthlyRent}/mo). Is it available for inspection?`
+    )
     : encodeURIComponent(
-        `Hello! I saw your ${property.bhk} rental home at ${property.societyName}, ${property.locality} on RentNest (₹${property.pricing.monthlyRent}/mo). Is it available for a visit?`
-      );
+      `Hello! I saw your ${property.bhk} rental home at ${property.societyName}, ${property.locality} on RentNest (₹${property.pricing.monthlyRent}/mo). Is it available for a visit?`
+    );
   const whatsappUrl = `https://wa.me/${whatsappNum}?text=${whatsappMsg}`;
 
   const handleBookVisit = async (e) => {
@@ -242,17 +242,17 @@ const PropertyDetailPage = () => {
     },
     ...(property.coordinates?.lat && property.coordinates?.lng
       ? {
-          geo: {
-            '@type': 'GeoCoordinates',
-            latitude: property.coordinates.lat,
-            longitude: property.coordinates.lng,
-          },
-        }
+        geo: {
+          '@type': 'GeoCoordinates',
+          latitude: property.coordinates.lat,
+          longitude: property.coordinates.lng,
+        },
+      }
       : {}),
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8 pb-28 lg:pb-8">
+    <div className="p-2 pb-3">
       <Seo
         title={seoTitle}
         description={seoDescription}
@@ -260,9 +260,9 @@ const PropertyDetailPage = () => {
         image={primaryImage}
         jsonLd={propertyJsonLd}
       />
-      
+
       {/* Top Navigation & Actions */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3">
         <Link
           to="/explore"
           className="flex items-center space-x-1.5 text-xs font-bold text-slate-600 hover:text-blue-600 transition-colors py-1"
@@ -285,11 +285,10 @@ const PropertyDetailPage = () => {
 
           <button
             onClick={() => toggleWishlist(property)}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 sm:py-2 rounded-xl text-xs font-bold border transition-all ${
-              isSaved(property._id)
-                ? 'bg-rose-500 text-white border-rose-500 shadow-sm'
-                : 'bg-white text-slate-700 border-slate-200 hover:border-rose-400 hover:text-rose-500'
-            }`}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 sm:py-2 rounded-xl text-xs font-bold border transition-all ${isSaved(property._id)
+              ? 'bg-rose-500 text-white border-rose-500 shadow-sm'
+              : 'bg-white text-slate-700 border-slate-200 hover:border-rose-400 hover:text-rose-500'
+              }`}
           >
             <Heart className={`w-3.5 h-3.5 ${isSaved(property._id) ? 'fill-white' : ''}`} />
             <span>{isSaved(property._id) ? 'Saved' : 'Save'}</span>
@@ -297,11 +296,10 @@ const PropertyDetailPage = () => {
 
           <button
             onClick={() => toggleCompare(property)}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 sm:py-2 rounded-xl text-xs font-bold border transition-all ${
-              isCompared(property._id)
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400'
-            }`}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 sm:py-2 rounded-xl text-xs font-bold border transition-all ${isCompared(property._id)
+              ? 'bg-blue-600 text-white border-blue-600'
+              : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400'
+              }`}
           >
             <Scale className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">{isCompared(property._id) ? 'Shortlisted' : 'Add to Compare'}</span>
@@ -371,9 +369,8 @@ const PropertyDetailPage = () => {
               <button
                 key={idx}
                 onClick={() => setActivePhotoIdx(idx)}
-                className={`relative w-20 sm:w-24 h-14 sm:h-16 rounded-xl overflow-hidden border-2 shrink-0 transition-all ${
-                  activePhotoIdx === idx ? 'border-blue-600 ring-2 ring-blue-500/30' : 'border-transparent opacity-70 hover:opacity-100'
-                }`}
+                className={`relative w-20 sm:w-24 h-14 sm:h-16 rounded-xl overflow-hidden border-2 shrink-0 transition-all ${activePhotoIdx === idx ? 'border-blue-600 ring-2 ring-blue-500/30' : 'border-transparent opacity-70 hover:opacity-100'
+                  }`}
               >
                 <img src={photo.url} alt={`${property.title} - ${photo.roomTag || `Photo ${idx + 1}`}`} className="w-full h-full object-cover" />
                 <span className="absolute bottom-0 inset-x-0 bg-slate-900/80 text-white text-[9px] text-center font-semibold truncate px-1">
@@ -387,10 +384,10 @@ const PropertyDetailPage = () => {
 
       {/* Main Grid: Details (Left) + Financials & Owner (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
+
         {/* Left Column (8 cols) */}
         <div className="lg:col-span-8 space-y-8">
-          
+
           {/* Header & Badges */}
           <div className="space-y-3 pb-6 border-b border-slate-200">
             <div className="flex flex-wrap items-center gap-2">
@@ -712,10 +709,10 @@ const PropertyDetailPage = () => {
 
         {/* Right Sticky Sidebar (4 cols) */}
         <div className="lg:col-span-4 sticky top-24 space-y-6">
-          
+
           {/* Booking & Pricing Card */}
           <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xl space-y-6">
-            
+
             {/* Price Headline */}
             <div className="pb-4 border-b border-slate-100 flex items-baseline justify-between">
               <div>
@@ -731,33 +728,49 @@ const PropertyDetailPage = () => {
 
             {/* Direct Connect Buttons */}
             <div className="space-y-2.5">
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() =>
-                  trackEvent('contact_owner', {
-                    channel: 'whatsapp',
-                    source: 'property_detail',
-                    property_id: property._id,
-                    city: property.city || 'Rajkot',
-                    locality: property.locality,
-                    category: property.category,
-                  })
-                }
-                className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl text-xs font-bold flex items-center justify-center space-x-2 shadow-lg shadow-emerald-500/20 transition-transform active:scale-95"
-              >
-                <MessageCircle className="w-4 h-4" />
-                <span>Chat with Owner on WhatsApp</span>
-              </a>
+              {property.owner?.phoneHidden ? (
+                <div className="w-full py-2.5 px-3 bg-slate-100 text-slate-600 rounded-2xl text-xs font-bold text-center border border-slate-200">
+                  Phone reserved for KYC-verified tenants — use In-App Chat below
+                </div>
+              ) : (
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() =>
+                    trackEvent('contact_owner', {
+                      channel: 'whatsapp',
+                      source: 'property_detail',
+                      property_id: property._id,
+                      city: property.city || 'Rajkot',
+                      locality: property.locality,
+                      category: property.category,
+                    })
+                  }
+                  className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl text-xs font-bold flex items-center justify-center space-x-2 shadow-lg shadow-emerald-500/20 transition-transform active:scale-95"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Chat with Owner on WhatsApp</span>
+                </a>
+              )}
 
               <button
                 type="button"
-                onClick={() => {
+                onClick={async () => {
                   if (!isAuthenticated) {
                     toast('Please login to chat in app', { icon: '🔑' });
                     setIsAuthModalOpen(true);
                     return;
+                  }
+                  try {
+                    if (ownerId && currentUserId && ownerId.toString() !== currentUserId.toString()) {
+                      await api.post('/chat/conversations', {
+                        recipientId: ownerId,
+                        propertyId: property._id,
+                      });
+                    }
+                  } catch {
+                    // Open drawer even if conversation creation fails
                   }
                   trackEvent('contact_owner', {
                     channel: 'in_app_chat',

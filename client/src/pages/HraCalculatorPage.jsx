@@ -54,7 +54,7 @@ const HraCalculatorPage = () => {
 
   const siteUrl = getSiteUrl();
   return (
-    <div className="max-w-5xl mx-auto px-4 py-10 space-y-8">
+    <div className="px-4 py-10 space-y-8">
       <Seo
         title="HRA Exemption Calculator & Rent Receipt Generator (Sec 10/13A) | RentNest"
         description="Calculate House Rent Allowance (HRA) tax exemption under Section 10(13A) and generate printable monthly rent receipts with landlord PAN details."
@@ -69,7 +69,7 @@ const HraCalculatorPage = () => {
           offers: { '@type': 'Offer', price: '0', priceCurrency: 'INR' },
         }}
       />
-      
+
       {/* Title */}
       <div className="text-center space-y-2 print:hidden">
         <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">
@@ -85,7 +85,7 @@ const HraCalculatorPage = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 print:block">
-        
+
         {/* Input Form (5 cols) */}
         <div className="lg:col-span-5 bg-white p-6 rounded-3xl border border-slate-200 shadow-md space-y-4 print:hidden">
           <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider pb-2 border-b border-slate-100">
@@ -194,7 +194,7 @@ const HraCalculatorPage = () => {
 
         {/* Results & Receipt Preview (7 cols) */}
         <div className="lg:col-span-7 space-y-6 print:w-full print:space-y-4">
-          
+
           {result ? (
             <>
               {/* Summary Cards */}

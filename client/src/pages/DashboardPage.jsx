@@ -6,24 +6,32 @@ import api from '../api/client';
 import toast from 'react-hot-toast';
 import KycUploadModal from '../components/KycUploadModal';
 import Seo from '../components/Seo';
-import { 
-  User, 
-  Home, 
-  Calendar, 
-  ShieldCheck, 
-  PlusCircle, 
-  ExternalLink, 
-  Trash2, 
-  Clock, 
-  CheckCircle2, 
-  Phone, 
-  FileCheck, 
+import {
+  User,
+  Home,
+  Calendar,
+  ShieldCheck,
+  PlusCircle,
+  ExternalLink,
+  Trash2,
+  Clock,
+  CheckCircle2,
+  Phone,
+  FileCheck,
   Pencil,
-  Heart
+  Heart,
+  Search,
+  Building2,
+  Users,
+  Calculator,
+  FileText,
+  CheckSquare,
+  BarChart3,
+  Shield
 } from 'lucide-react';
 
 const DashboardPage = () => {
-  const { user, demoLogin, updateUserRole } = useAuth();
+  const { user, demoLogin, updateUserRole, deleteAccount } = useAuth();
   const { wishlist, toggleWishlist, refreshWishlist } = useWishlist();
   const [properties, setProperties] = useState([]);
   const [visits, setVisits] = useState([]);
@@ -123,20 +131,39 @@ const DashboardPage = () => {
   }
 
   const handleDeleteProperty = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this listing?')) return;
+    if (!window.confirm('Are you sure you want to remove this listing?')) return;
     try {
       await api.delete(`/properties/${id}`);
       setProperties(properties.filter((p) => p._id !== id));
-      toast.success('Listing removed successfully');
+      toast.success('Listing removed (soft deleted)');
     } catch (err) {
-      toast.error('Failed to delete property');
+      toast.error('Failed to remove property');
     }
   };
 
+  const handleVisitStatusUpdate = async (visitId, nextStatus) => {
+    try {
+      const res = await api.put(`/visits/${visitId}`, { status: nextStatus });
+      if (res.data.success) {
+        setVisits((prev) =>
+          prev.map((v) => (v._id === visitId ? { ...v, status: res.data.visit.status } : v))
+        );
+        toast.success(`Visit ${nextStatus}`);
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update visit status');
+    }
+  };
+
+  const handleDeactivateAccount = async () => {
+    if (!window.confirm('Deactivate your account and unlist all active properties? This performs a soft delete.')) return;
+    await deleteAccount();
+  };
+
   return (
-    <div className="max-w-6xl mx-auto px-4 py-10 space-y-8">
+    <div className="px-4 py-10 space-y-8">
       <Seo noIndex title="My Dashboard | RentNest" />
-      
+
       {/* User Profile Banner */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
         <div className="flex items-center space-x-4">
@@ -188,61 +215,168 @@ const DashboardPage = () => {
 
         {/* Account Mode & Persona Controls */}
         <div className="flex flex-col sm:items-end gap-3 w-full sm:w-auto">
-          {/* Active Account Role Switcher (Updates user's role in MongoDB) */}
-          <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-200">
-            <span className="text-[10px] font-extrabold uppercase text-slate-500 pl-1">Role:</span>
-            {['tenant', 'owner', 'broker'].map((r) => (
-              <button
-                key={r}
-                type="button"
-                disabled={switchingRole}
-                onClick={() => handleRoleChange(r)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition-all ${
-                  user.role === r
+          {/* Active Account Role Switcher (Hidden for Admin to prevent accidental downgrade) */}
+          {user.role !== 'admin' && (
+            <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-200">
+              <span className="text-[10px] font-extrabold uppercase text-slate-500 pl-1">Role:</span>
+              {['tenant', 'owner', 'broker'].map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  disabled={switchingRole}
+                  onClick={() => handleRoleChange(r)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition-all ${user.role === r
                     ? 'bg-blue-600 text-white shadow-sm'
                     : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-                }`}
-                title={`Switch your profile role to ${r}`}
-              >
-                {r === 'tenant' ? '👤 Tenant' : r === 'owner' ? '🏠 Owner' : '💼 Broker'}
-              </button>
-            ))}
-          </div>
+                    }`}
+                  title={`Switch your profile role to ${r}`}
+                >
+                  {r === 'tenant' ? '👤 Tenant' : r === 'owner' ? '🏠 Owner' : '💼 Broker'}
+                </button>
+              ))}
+            </div>
+          )}
 
-          {/* Quick Demo Persona Bar (Demo accounts) */}
+          {/* Quick Demo Persona Bar (Dev / Demo Mode only) + Account Deactivation */}
           <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-            <span className="text-[10px] uppercase font-bold text-slate-400">Demo Login:</span>
-            {['tenant', 'owner', 'broker', 'admin'].map((r) => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => demoLogin(r)}
-                className="px-2 py-1 rounded-lg text-[10px] font-bold capitalize bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
-              >
-                {r}
-              </button>
-            ))}
+            {(import.meta.env.DEV || import.meta.env.VITE_ENABLE_DEMO_MODE === 'true') && (
+              <>
+                <span className="text-[10px] uppercase font-bold text-slate-400">Demo Login:</span>
+                {['tenant', 'owner', 'broker', 'admin'].map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => demoLogin(r)}
+                    className="px-2 py-1 rounded-lg text-[10px] font-bold capitalize bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
+                  >
+                    {r}
+                  </button>
+                ))}
+              </>
+            )}
+            <button
+              type="button"
+              onClick={handleDeactivateAccount}
+              className="ml-2 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors"
+            >
+              Deactivate Account
+            </button>
           </div>
+        </div>
+      </div>
+
+      {/* Quick Actions & Menu Shortcuts (Role-Tailored Redirection) */}
+      <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200 shadow-sm space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">
+            Quick Menu Shortcuts ({user.role})
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {user.role === 'admin' && (
+            <>
+              <Link
+                to="/admin"
+                className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold flex items-center space-x-1.5 shadow-sm"
+              >
+                <Shield className="w-3.5 h-3.5" />
+                <span>Admin Desk</span>
+              </Link>
+              <Link
+                to="/admin?tab=analytics"
+                className="px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold flex items-center space-x-1.5"
+              >
+                <BarChart3 className="w-3.5 h-3.5" />
+                <span>Platform Analytics</span>
+              </Link>
+              <Link
+                to="/admin?tab=users"
+                className="px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs font-bold flex items-center space-x-1.5"
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>Manage Users (CRUD)</span>
+              </Link>
+            </>
+          )}
+
+          {(user.role === 'owner' || user.role === 'broker' || user.role === 'admin') && (
+            <Link
+              to="/post-property"
+              className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center space-x-1.5 shadow-sm"
+            >
+              <PlusCircle className="w-3.5 h-3.5 text-blue-400" />
+              <span>{user.role === 'broker' ? 'Post New Listing' : 'Post New Property'}</span>
+            </Link>
+          )}
+
+          <Link
+            to="/explore"
+            className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-bold flex items-center space-x-1.5"
+          >
+            <Search className="w-3.5 h-3.5" />
+            <span>Explore Homes</span>
+          </Link>
+
+          <Link
+            to="/explore?category=commercial"
+            className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 text-xs font-bold flex items-center space-x-1.5"
+          >
+            <Building2 className="w-3.5 h-3.5" />
+            <span>Commercial Spaces</span>
+          </Link>
+
+          {user.role === 'tenant' && (
+            <Link
+              to="/roommates"
+              className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-bold flex items-center space-x-1.5"
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span>Find Flatmates</span>
+            </Link>
+          )}
+
+          <Link
+            to="/tools/hra-calculator"
+            className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 text-xs font-bold flex items-center space-x-1.5"
+          >
+            <Calculator className="w-3.5 h-3.5" />
+            <span>HRA Calculator</span>
+          </Link>
+
+          <Link
+            to="/tools/rental-agreement"
+            className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 text-xs font-bold flex items-center space-x-1.5"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>Rental Agreement</span>
+          </Link>
+
+          <Link
+            to="/tools/move-in-checklist"
+            className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 text-xs font-bold flex items-center space-x-1.5"
+          >
+            <CheckSquare className="w-3.5 h-3.5" />
+            <span>Move-in Checklist</span>
+          </Link>
         </div>
       </div>
 
       {/* Grid: My Properties & My Scheduled Visits */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
+
         {/* Left: My Listed Properties / Saved Wishlist (7 cols) */}
         <div className="lg:col-span-7 space-y-4">
-          
+
           {/* Tab Switcher */}
           <div className="flex items-center justify-between border-b border-slate-200 pb-3">
             <div className="flex items-center space-x-2">
               {user.role !== 'tenant' && (
                 <button
                   onClick={() => setDashboardTab('listings')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 ${
-                    dashboardTab === 'listings'
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 ${dashboardTab === 'listings'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
                 >
                   <Home className="w-3.5 h-3.5" />
                   <span>My Listings ({properties.length})</span>
@@ -251,11 +385,10 @@ const DashboardPage = () => {
 
               <button
                 onClick={() => setDashboardTab('saved')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 ${
-                  dashboardTab === 'saved'
-                    ? 'bg-rose-500 text-white shadow-sm'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 ${dashboardTab === 'saved'
+                  ? 'bg-rose-500 text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
               >
                 <Heart className="w-3.5 h-3.5" />
                 <span>Saved Wishlist ({wishlist.length})</span>
@@ -441,6 +574,38 @@ const DashboardPage = () => {
                   <div className="text-[11px] text-slate-500 font-medium">
                     📅 {new Date(v.preferredDate).toLocaleDateString()} • {v.timeSlot}
                   </div>
+
+                  {v.status === 'pending' && (
+                    <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                      {(v.owner?._id === user?._id || v.owner === user?._id || user?.role === 'admin') && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleVisitStatusUpdate(v._id, 'accepted')}
+                            className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleVisitStatusUpdate(v._id, 'declined')}
+                            className="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-[10px] font-bold"
+                          >
+                            Decline
+                          </button>
+                        </>
+                      )}
+                      {(v.tenant?._id === user?._id || v.tenant === user?._id) && (
+                        <button
+                          type="button"
+                          onClick={() => handleVisitStatusUpdate(v._id, 'cancelled')}
+                          className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold"
+                        >
+                          Cancel Request
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

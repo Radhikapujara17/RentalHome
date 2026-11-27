@@ -77,13 +77,13 @@ const MoveInChecklistPage = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-10 space-y-8 print:py-0 print:px-0 print:space-y-3">
+    <div className="px-4 py-10 space-y-8 print:py-0 print:px-0 print:space-y-3">
       <Seo
         title="Move-In Inspection Checklist & Deposit Shield | RentNest"
         description="Document room-by-room flat condition on move-in day with tenant and landlord verification to protect your security deposit."
         canonicalPath="/tools/move-in-checklist"
       />
-      
+
       {/* Header */}
       <div className="text-center space-y-2 print:space-y-0">
         <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200 print:hidden">
@@ -99,7 +99,7 @@ const MoveInChecklistPage = () => {
       </div>
 
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xl space-y-6 print:p-0 print:border-0 print:shadow-none print:space-y-3">
-        
+
         {/* Basic Property Header */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pb-6 border-b border-slate-100 text-xs font-semibold print:grid-cols-3 print:pb-2 print:gap-2">
           <div>
@@ -156,15 +156,14 @@ const MoveInChecklistPage = () => {
                           key={status}
                           type="button"
                           onClick={() => handleStatusChange(roomIdx, itemIdx, status)}
-                          className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all print:px-1.5 print:py-0.5 print:text-[10px] ${
-                            item.status === status
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all print:px-1.5 print:py-0.5 print:text-[10px] ${item.status === status
                               ? status === 'Damaged'
                                 ? 'bg-rose-600 text-white'
                                 : status === 'Scratched/Stained'
-                                ? 'bg-amber-600 text-white'
-                                : 'bg-emerald-600 text-white'
+                                  ? 'bg-amber-600 text-white'
+                                  : 'bg-emerald-600 text-white'
                               : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 print:hidden'
-                          }`}
+                            }`}
                         >
                           {status}
                         </button>
